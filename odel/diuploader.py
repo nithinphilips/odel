@@ -88,6 +88,9 @@ def parse_url(url, port='9080'):
     >>> parse_url("localhost")
     'http://localhost:9080'
 
+    >>> parse_url("localhost:9080")
+    'http://localhost:9080'
+
     Alternate default port:
     >>> parse_url("localhost", port=8001)
     'http://localhost:8001'
