@@ -29,7 +29,6 @@ to ``triPeople-triPeople-triEmployee.txt``, you can run::
 
 Odel will parse the file name to get the necessary information.
 
-[NOT IMPLEMENTED]
 The url portion can be shortend to just the server name::
 
     odel --username=system --password=admin \

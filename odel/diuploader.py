@@ -71,9 +71,59 @@ def normalize_url(url):
     >>> normalize_url("http://www.google.com")
     'http://www.google.com'
     """
+    return url[:-1] if url.endswith("/") else url
 
-    if url.endswith("/"):
-        return url[:-1]
+
+def parse_url(url, port='9080'):
+    """
+    Parses a flexible user provided URL
+
+    If port is set, the port will be appended as :port, unless
+    it is 80 or 443. If 443 the returned URL will have https
+    scheme
+
+    Examples:
+
+    Host name only:
+    >>> parse_url("localhost")
+    'http://localhost:9080'
+
+    Alternate default port:
+    >>> parse_url("localhost", port=8001)
+    'http://localhost:8001'
+
+    Fully qualified URLs are not modified:
+    >>> parse_url("http://localhost")
+    'http://localhost'
+
+    >>> parse_url("https://localhost")
+    'https://localhost'
+
+    >>> parse_url("http://localhost:9080")
+    'http://localhost:9080'
+
+    Host name and port 80:
+    >>> parse_url("localhost", port=80)
+    'http://localhost'
+
+    Host name and port 443:
+    >>> parse_url("localhost", port=443)
+    'https://localhost'
+    """
+
+    # Port argument can be a string or int
+    port = int(port)
+
+    scheme = "https" if port == 443 else "http"
+
+    if url.startswith("http://") or url.startswith("https://"):
+        return url # URL is fully qualified. Don't do anything
+
+    url = scheme + "://" + url
+
+    if port and port != 80 and port != 443 and \
+       not url.endswith(":" + str(port)):
+        url = url + ":" + str(port)
 
     return url
 
@@ -92,21 +142,20 @@ def normalize_url(url):
 @arg('--password', '-p', help="Your tririga password.")
 @arg('filename', help="The file to upload.")
 @arg('url',
-     help="The URL to the TRIRIGA environment. Include any context paths")
+     help="The URL to the TRIRIGA environment. Include any context paths. "
+          "This could be just the hostname. In that case port 9080 will be appended")
 def upload(url, filename, username="system", password="admin",
            module=None, businessobject=None, form=None, wait=False):
     """
-Uploads a file to Data Integrator.
+    Uploads a file to Tririga Data Integrator.
 
-The module, businessobject and form arguments are optional if the file is named
-in the following pattern "<module>-<businessObject>-<form>.txt". Otherwise,
-you must specify them as arguments.
-
-
+    The module, businessobject and form arguments are optional if the file is named
+    in the following pattern "<module>-<businessObject>-<form>.txt". Otherwise,
+    you must specify them as arguments.
     """
 
     session = requests.Session()
-    site_url = normalize_url(url)
+    site_url = normalize_url(parse_url(url, port=9080))
 
     # Try to get Module/Bo/Form from the file name
     if not module or not businessobject or not form:
