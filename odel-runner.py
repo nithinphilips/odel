@@ -3,10 +3,10 @@
 # PYTHON_ARGCOMPLETE_OK
 
 
-"""Convenience wrapper for running bootstrap directly from source tree."""
+"""Convenience wrapper for running odel directly from source tree."""
 
 
-from bootstrap.bootstrap import main
+from odel.odel import main
 
 
 if __name__ == '__main__':
