@@ -12,7 +12,7 @@ import argparse
 import logging
 import sys
 
-from argh import ArghParser, completion, arg
+from argh import ArghParser, completion, arg, set_default_command
 
 from .diuploader import upload, wait_for_upload
 
@@ -26,16 +26,11 @@ COMMON_PARSER.add_argument('--debug',
 
 def main():
     parser = ArghParser()
-    parser.add_commands(
-        [
-            upload,
-            wait_for_upload
-        ]
-    )
+    set_default_command(parser, upload)
     completion.autocomplete(parser)
 
     # Parse ahead
-    args = parser.parse_args()
+    #args = parser.parse_args()
     #if args.debug:
     #    logging.basicConfig(
     #        level=logging.DEBUG,
