@@ -13,8 +13,14 @@ Once installed, odel can be invoked using the ``odel`` command::
 
     odel --help
 
-To upload a file named ``users.txt`` to Tririga running on ``localhost``, you
-can run::
+We will be working with a file called ``users.txt`` (the fields are TAB delimited)::
+
+    cat users.txt
+    triFirstNameTX  triLastNameTX   triUserNameTX
+    Homer   Simpson hsimpson
+    Bender  Rodriguez       brodriguez
+
+To upload ``users.txt`` to Tririga running on ``localhost``, you can run::
 
     odel --username=system --password=admin --module=triPeople \
          --businessobject=triPeople --form=triEmployee \
@@ -35,7 +41,8 @@ The url portion can be shortend to just the server name::
          localhost:9080 triPeople-triPeople-triEmployee.txt
 
 The port can be removed as well. The username and password default to 
-``system`` and ``admin``, so those can also be omitted::
+``system`` and ``admin``, so those can also be omitted (also now is a good
+time to change that password lest you get pwned!)::
 
     odel localhost triPeople-triPeople-triEmployee.txt
 
