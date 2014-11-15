@@ -171,7 +171,16 @@ def upload(url, filename, username="system", password="admin",
         module, businessobject, form, site_url, username, password
     )
 
+    logging.debug("Uploading to {}({})::{}({})::{}({})".format(
+            module, moduleid, businessobject, businessobjectid, form, formid
+        )
+    )
+
     transition = transitions[0]
+    logging.debug(
+        "The {} state transitions will be "
+        "triggered on the new records.".format(transition)
+    )
 
     authpayload = {
         'USERNAME': username,
@@ -180,6 +189,7 @@ def upload(url, filename, username="system", password="admin",
         'actionId': TRIRIGA_AUTH_FORCELOGIN_ACTIONID,
     }
 
+    logging.debug("Logging in")
     url = '{}/WebProcess.srv'.format(site_url)
     response = session.post(url, data=authpayload, allow_redirects=False)
 
@@ -323,6 +333,8 @@ def wait_for_upload(filename, site_url, username, password):
     processing_status = ("NEW", "DONE", "UPLOADING...")
 
     for check_count in xrange(1, 60):
+        logging.debug("Checking for changes to uploaded file status: Attempt {}".format(check_count))
+
         # We will not run a continuation query.
         # If you uploaded more than 999 files with the same name, screw you.
         results = client.service.runNamedQuery(
@@ -344,6 +356,7 @@ def wait_for_upload(filename, site_url, username, password):
                         found_processing = True
 
         if not found_processing:
+            logging.debug("File appears to be fully processed")
             break
 
         time.sleep(10)
