@@ -7,10 +7,8 @@
 __version__ = "0.2.0"
 
 
-#import argcomplete
 import argparse
-#import logging
-#import sys
+import logging
 
 from argh import ArghParser, completion, set_default_command
 
@@ -37,5 +35,8 @@ def main():
             level=logging.DEBUG,
             format='%(asctime)s %(levelname)s: %(message)s'
         )
+
+        # Cut down suds logs
+        logging.getLogger('suds').setLevel(logging.WARNING)
 
     parser.dispatch()
