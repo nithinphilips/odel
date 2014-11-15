@@ -64,7 +64,7 @@ To check the status of the Data Upload, Odel uses BusinessConnect.
 
 License
 -------
-..code::
+.. code::
 
     Odel. Tool to upload Data Integrator files to IBM Tririga.
     Copyright (C) 2014 Nithin Philips
