@@ -2,8 +2,8 @@
 # PYTHON_ARGCOMPLETE_OK
 
 
-"""bootstrap.__main__: executed when bootstrap directory is called as script."""
+"""odel.__main__: executed when bootstrap directory is called as script."""
 
-from .bootstrap import main
+from .odel import main
 
 main()

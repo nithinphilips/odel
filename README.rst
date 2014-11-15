@@ -48,7 +48,7 @@ records. Often, when running as part of a batch process you will want to wait
 until the file is processed before performing the next task. 
 
 If the ``-w`` flag is set, Odel will wait until Tririga changes the data upload
-status to *Rollup All Completed" or *Failed*, indicating the completion of the
+status to *Rollup All Completed* or *Failed*, indicating the completion of the
 upload process.
 
 How it Works

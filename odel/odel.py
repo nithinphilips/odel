@@ -7,14 +7,14 @@
 __version__ = "0.2.0"
 
 
-import argcomplete
+#import argcomplete
 import argparse
-import logging
-import sys
+#import logging
+#import sys
 
-from argh import ArghParser, completion, arg, set_default_command
+from argh import ArghParser, completion, set_default_command
 
-from .diuploader import upload, wait_for_upload
+from .diuploader import upload
 
 # These arguments are used by this global dispatcher and each individual
 # stand-alone commands.
@@ -25,6 +25,7 @@ COMMON_PARSER.add_argument('--debug',
                            help="Enable debug logging.")
 
 def main():
+    """Main application entrypoint"""
     parser = ArghParser()
     set_default_command(parser, upload)
     completion.autocomplete(parser)

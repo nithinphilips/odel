@@ -2,7 +2,6 @@
 
 """DI Uploader"""
 
-import cookielib
 import requests
 import time
 import os
@@ -56,12 +55,14 @@ def normalize_url(url):
          "processing"
 )
 @arg('--module', '-m', help="The name of the module to which to upload")
-@arg('--businessobject', '-b', help="The name of the business object to which to upload")
+@arg('--businessobject', '-b',
+     help="The name of the business object to which to upload")
 @arg('--form', '-f', help="The name of the form to which to upload")
 @arg('--username', '-u', help="Your tririga username.")
 @arg('--password', '-p', help="Your tririga password.")
 @arg('filename', help="The file to upload.")
-@arg('url', help="The URL to the TRIRIGA environment. Include any context paths")
+@arg('url',
+     help="The URL to the TRIRIGA environment. Include any context paths")
 def upload(url, filename, username="system", password="admin",
            module=None, businessobject=None, form=None, wait=False):
     """
@@ -74,7 +75,7 @@ you must specify them as arguments.
 
     """
 
-    s = requests.Session()
+    session = requests.Session()
     site_url = normalize_url(url)
 
     # Try to get Module/Bo/Form from the file name
@@ -101,32 +102,32 @@ you must specify them as arguments.
     }
 
     url = '{}/WebProcess.srv'.format(site_url)
-    r = s.post(url, data=authpayload, allow_redirects=False)
+    response = session.post(url, data=authpayload, allow_redirects=False)
 
     files = {'theFile': open(filename, 'rb')}
     filenameonly = os.path.basename(filename)
 
     diparams = {
-            'updateAct': "createSpec",
-            'filenames': filenameonly,
-            'classTypeN': moduleid,
-            'objectTypeN': businessobjectid,
-            'guiIdN': formid,
-            'delimiterN': '.TAB',
-            'charSet': 'UTF-8',
-            'transactionTypeN': 'Insert/New',
-            'batch': 'NO',
-            'actionName': transition,
-            'stateName': 'triDraft',
+        'updateAct': "createSpec",
+        'filenames': filenameonly,
+        'classTypeN': moduleid,
+        'objectTypeN': businessobjectid,
+        'guiIdN': formid,
+        'delimiterN': '.TAB',
+        'charSet': 'UTF-8',
+        'transactionTypeN': 'Insert/New',
+        'batch': 'NO',
+        'actionName': transition,
+        'stateName': 'triDraft',
     }
 
     # 1. Upload the file contents
     url = '{}/html/en/default/common/dataUploadFile.jsp'.format(site_url)
-    r = s.post(url, params=diparams, files=files)
+    response = session.post(url, params=diparams, files=files)
 
     # 2. Create the Data Upload job
     url = '{}/html/en/default/common/dataSmartUpload.jsp'.format(site_url)
-    r = s.post(url, params=diparams)
+    response = session.post(url, params=diparams)
 
     if wait:
         wait_for_upload(filenameonly, site_url, username, password)
@@ -232,22 +233,22 @@ def wait_for_upload(filename, site_url, username, password):
     namefilter.sectionName = "General"
     filters.Filter = [namefilter]
 
-    projectName = ""
-    moduleName = "System"
-    objectTypeName = "Data Upload"
-    queryName = "Data Upload - System - Manager Query"
+    projectname = ""
+    modulename = "System"
+    objecttypename = "Data Upload"
+    queryname = "Data Upload - System - Manager Query"
     start = 1
-    maximumResultCount = 999
+    maximumresultcount = 999
 
     ok_status = ("Rollup All Completed", "Failed")
     processing_status = ("NEW", "DONE", "UPLOADING...")
 
-    for x in xrange(1, 60):
+    for check_count in xrange(1, 60):
         # We will not run a continuation query.
         # If you uploaded more than 999 files with the same name, screw you.
         results = client.service.runNamedQuery(
-            projectName, moduleName, objectTypeName, queryName, filters, start,
-            maximumResultCount
+            projectname, modulename, objecttypename, queryname, filters, start,
+            maximumresultcount
         )
 
         # It is possible that there is more than one file with the same name.
