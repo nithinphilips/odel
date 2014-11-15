@@ -6,6 +6,7 @@ import requests
 import time
 import os
 import sys
+import logging
 
 from argh import arg
 from suds.plugin import MessagePlugin
@@ -15,26 +16,55 @@ TRIRIGA_AUTH_OBJECTID = '1000'
 TRIRIGA_AUTH_LOGIN_ACTIONID = '1005'
 TRIRIGA_AUTH_FORCELOGIN_ACTIONID = '1006'
 
-def parse_filename(filename):
+def parse_filename(filename, separator='-'):
     """
     Extract Module, BO, and Form name from filename.
 
     The filename should be in the format ``Module-BusinessObject-Form.txt``
 
+    File name only, no extension:
+    >>> parse_filename("triPeople-triPeople-triEmployee")
+    ['triPeople', 'triPeople', 'triEmployee']
+
+    File name only with extension:
     >>> parse_filename("triPeople-triPeople-triEmployee.txt")
     ['triPeople', 'triPeople', 'triEmployee']
+
+    File name only with another extension:
     >>> parse_filename("triPeople-triPeople-triEmployee.xlsx")
     ['triPeople', 'triPeople', 'triEmployee']
-    >>> parse_filename("/home/odel/triPeople-triPeople-triEmployee.xlsx")
+
+    File name with full path:
+    >>> parse_filename("/home/odel/triPeople-triPeople-triEmployee.txt")
     ['triPeople', 'triPeople', 'triEmployee']
+
+    File name with full path and a sequence prefix:
+    >>> parse_filename("/home/odel/001-triPeople-triPeople-triEmployee.txt")
+    ['triPeople', 'triPeople', 'triEmployee']
+
+    File name with full path and a sequence prefix and spaces around the separators:
+    >>> parse_filename("/home/odel/001 - triPeople - triPeople - triEmployee.txt")
+    ['triPeople', 'triPeople', 'triEmployee']
+
+    If the file name does not have three parts a ValueError is raised:
+    >>> parse_filename("/home/odel/badname.xlsx")
+    Traceback (most recent call last):
+      File "odel/diuploader.py", line 60, in parse_filename
+        raise ValueError("The filename must have at least three components separated by '-'.")
+    ValueError: The filename must have at least three components separated by '-'.
     """
     basename = os.path.basename(filename)
     basename = os.path.splitext(basename)[0]
-    return basename.split('-')
+    results = basename.split(separator)[-3:]
+    if len(results) == 3:
+        results = map(str.strip, results)
+        return results
+
+    raise ValueError("The filename must have at least three components separated by '-'.")
 
 def normalize_url(url):
     """
-    Normalizes a URL.
+    Normalizes a URL by stripping the trailing slash.
 
     >>> normalize_url("http://www.google.com/")
     'http://www.google.com'
