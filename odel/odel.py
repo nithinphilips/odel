@@ -26,16 +26,16 @@ COMMON_PARSER.add_argument('--debug',
 
 def main():
     """Main application entrypoint"""
-    parser = ArghParser()
+    parser = ArghParser(parents=[COMMON_PARSER])
     set_default_command(parser, upload)
     completion.autocomplete(parser)
 
-    # Parse ahead
-    #args = parser.parse_args()
-    #if args.debug:
-    #    logging.basicConfig(
-    #        level=logging.DEBUG,
-    #        format='%(asctime)s %(levelname)s: %(message)s'
-    #    )
+    # Peek CLI arguments and globally enable debugging
+    args = parser.parse_args()
+    if args.debug:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s %(levelname)s: %(message)s'
+        )
 
     parser.dispatch()
