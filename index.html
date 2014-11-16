@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Architects+Daughter' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <title>Odel by nithinphilips</title>
+  </head>
+
+  <body>
+    <header>
+      <div class="inner">
+        <h1>Odel</h1>
+        <h2>Tool to upload documents to Tririga from command-line</h2>
+        <a href="https://github.com/nithinphilips/odel" class="button"><small>View project on</small> GitHub</a>
+      </div>
+    </header>
+
+    <div id="content-wrapper">
+      <div class="inner clearfix">
+        <section id="main-content">
+          <h1>
+<a id="odel" class="anchor" href="#odel" aria-hidden="true"><span class="octicon octicon-link"></span></a>Odel</h1>
+
+<p>Odel uploads Data Integrator files to Tririga from the command-line.</p>
+
+<p>You can import the files quickly and easily with Odel. It can also be called
+from script as part of a batch process.</p>
+
+<p>Get started by installing Odel::</p>
+
+<pre><code>python setup.py install
+</code></pre>
+
+<p>Once installed, odel can be invoked using the <code>odel</code> command::</p>
+
+<pre><code>odel --help
+</code></pre>
+
+<p>We will be working with a file called <code>users.txt</code> (the fields are TAB delimited)::</p>
+
+<pre><code>$ cat users.txt
+triFirstNameTX  triLastNameTX   triUserNameTX
+Homer   Simpson hsimpson
+Bender  Rodriguez       brodriguez
+</code></pre>
+
+<p>To upload <code>users.txt</code> to Tririga running on <code>localhost</code>, you can run::</p>
+
+<pre><code>odel --username=system --password=admin --module=triPeople \
+     --businessobject=triPeople --form=triEmployee \
+     http://localhost:9080/ users.txt
+</code></pre>
+
+<p>You can save some typing if you name you DI files to include the module,
+business object and form names. For example, if you rename <code>users.txt</code>
+to <code>triPeople-triPeople-triEmployee.txt</code>, you can run::</p>
+
+<pre><code>odel --username=system --password=admin \
+     http://localhost:9080/ triPeople-triPeople-triEmployee.txt
+</code></pre>
+
+<p>Odel will parse the file name to get the necessary information.</p>
+
+<p>The url portion may be shortend to just the server name::</p>
+
+<pre><code>odel --username=system --password=admin \
+     localhost:9080 triPeople-triPeople-triEmployee.txt
+</code></pre>
+
+<p>The port can be removed as well. The username and password default to 
+<code>system</code> and <code>admin</code>, so those can also be omitted (also now is a good
+time to change that password lest you get pwned!)::</p>
+
+<pre><code>odel localhost triPeople-triPeople-triEmployee.txt
+</code></pre>
+
+<h2>
+<a id="waiting-for-processing" class="anchor" href="#waiting-for-processing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Waiting for Processing</h2>
+
+<p>Normally Odel will terminate as soon as the file is transmitted to Tririga.  It
+will still take a few minutes for Tririga to process the file and create the
+records. Often, when running as part of a batch process you will want to wait
+until the file is processed before performing the next task. </p>
+
+<p>If the <code>-w</code> flag is set, Odel will wait until Tririga changes the data upload
+status to <em>Rollup All Completed</em> or <em>Failed</em>, indicating the completion of the
+upload process.</p>
+
+<h2>
+<a id="how-it-works" class="anchor" href="#how-it-works" aria-hidden="true"><span class="octicon octicon-link"></span></a>How it Works</h2>
+
+<p>Tririga does not provide a public API to upload files through Data Integrator.
+To make Odel work we simulate an interactive user session. Odel uses a
+combination of BusinessConnect (SOAP API) and web scraping to do its job.</p>
+
+<p>The first use for the SOAP API is to turn the module, business object and form
+names into IDs. The Data Integrator feature expects IDs rather than string
+values. In the Tririga web interface, these fields are populated using
+Javascript. Odel does not execute any Javascript, so the SOAP API fills in the
+gap.</p>
+
+<p>Odel also retrieves the list possible <em>State Transitions</em> using the SOAP API.
+These are state transitions that originate from a <em>null</em> record. If the user
+did not specify a state transition using the <code>--action</code> argument the first
+possible state transition is selected.</p>
+
+<p>Next, Odel simulates a Tririga user login. It uses the <em>force</em> login option
+(same as clicking the "remove active session" link in the login page) to make
+sure the login always succeeds. This has the effect of ending any other active
+sessions for the Tririga user account. Once logged in the next step is to
+upload the file. Data Integrator works in two steps. Step one sends the file
+data to tririga. Step two sends the commands necessary to start the file
+processing. Tririga takes care of matching up the file contents and the
+processing commands.</p>
+
+<p>If the user did not specify the <code>--wait</code> option, Odel will then quit.</p>
+
+<p>If the <code>--wait</code> option is on, Odel needs to find out if the records that were
+just uploaded have been processed. Tririga processes Data Integrator uploads
+asynchronously. In the web interface the user will get a notification when the
+processing is complete. Checking the user's notifications is one possible
+method to see if the upload completed. It is however more reliable to check the
+Data Upload records themselves. So Odel invokes the <code>runNamedQuery</code> SOAP
+operation to run the <code>Data Upload - System - Manager Query</code> query. Odel
+passes in the file name as a dynamic filter to limit the number of records
+returned.</p>
+
+<p>Odel checks all the returned records (there could be more than one if another
+file with the same name was uploaded previously) to see if any of them are in
+one of the processing statuses (<code>NEW</code>, <code>DONE</code> or <code>UPLOADING...</code>.) If they
+are, Odel waits a few seconds and checks again. It repeats the process until
+the status changes. When the status changes Odel will quit. If the file is not
+processed in about 10 minutes Odel will simply give up. This can happen with
+very large files or more commonly if the <code>Data Integrator</code> agent is not
+running on the host where the file was uploaded.</p>
+
+<h2>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span class="octicon octicon-link"></span></a>License</h2>
+
+<pre><code>Odel. Tool to upload Data Integrator files to IBM Tririga.
+Copyright (C) 2014 Nithin Philips
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+</code></pre>
+        </section>
+
+        <aside id="sidebar">
+          <a href="https://github.com/nithinphilips/odel/zipball/master" class="button">
+            <small>Download</small>
+            .zip file
+          </a>
+          <a href="https://github.com/nithinphilips/odel/tarball/master" class="button">
+            <small>Download</small>
+            .tar.gz file
+          </a>
+
+          <p class="repo-owner"><a href="https://github.com/nithinphilips/odel"></a> is maintained by <a href="https://github.com/nithinphilips">nithinphilips</a>.</p>
+
+          <p>This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the Architect theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.</p>
+        </aside>
+      </div>
+    </div>
+
+  
+  </body>
+</html>
