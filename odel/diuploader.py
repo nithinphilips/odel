@@ -140,6 +140,9 @@ def parse_url(url, port='9080'):
 @arg('--module', '-m', help="The name of the module to which to upload")
 @arg('--businessobject', '-b',
      help="The name of the business object to which to upload")
+@arg('--action', '-a', 
+     help="The action to apply to the newly created records. "
+          "By default the first possible action is applied.")
 @arg('--form', '-f', help="The name of the form to which to upload")
 @arg('--username', '-u', help="Your tririga username.")
 @arg('--password', '-p', help="Your tririga password.")
@@ -148,7 +151,7 @@ def parse_url(url, port='9080'):
      help="The URL to the TRIRIGA environment. Include any context paths. "
           "This could be just the hostname. In that case port 9080 will be appended")
 def upload(url, filename, username="system", password="admin",
-           module=None, businessobject=None, form=None, wait=False):
+           module=None, businessobject=None, form=None, action=None, wait=False):
     """
     Uploads a file to Tririga Data Integrator.
 
@@ -179,7 +182,15 @@ def upload(url, filename, username="system", password="admin",
         )
     )
 
-    transition = transitions[0]
+    if not action:
+        transition = transitions[0]
+
+    if action not in transitions:
+        sys.stderr.write(
+            "WARNING: The state transition {} does not appear to be valid for "
+            "the selected record type. The upload may fail.".format(action)
+        )
+
     logging.debug(
         "The {} state transitions will be "
         "triggered on the new records.".format(transition)
