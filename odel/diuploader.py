@@ -182,13 +182,15 @@ def upload(url, filename, username="system", password="admin",
         )
     )
 
-    if not action:
+    if action:
+        transition = action
+    else:
         transition = transitions[0]
 
-    if action not in transitions:
+    if transition not in transitions:
         sys.stderr.write(
             "WARNING: The state transition {} does not appear to be valid for "
-            "the selected record type. The upload may fail.".format(action)
+            "the selected record type. The upload may fail.".format(transition)
         )
 
     logging.debug(
