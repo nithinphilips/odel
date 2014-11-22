@@ -328,11 +328,18 @@ DATATYPE_NUMBER = 310
 DATATYPE_DATE = 330
 DATATYPE_DATETIME = 335
 
+MAX_RETRIES = 23
+
+
 def wait_for_upload(filename, site_url, username, password):
     """
     Wait until the upload of a given file completes.
 
-    The method will give up after 10 minutes
+    Implements exponential backoff algorithm described at
+    http://docs.aws.amazon.com/general/latest/gr/api-retries.html
+
+    MAX_RETRIES defines the number of attempts. 23 tries is about 24
+    hours of wait.
     """
 
     wsurl = '{}/ws/TririgaWS?wsdl'.format(site_url)
@@ -360,11 +367,21 @@ def wait_for_upload(filename, site_url, username, password):
     ok_status = ("Rollup All Completed", "Failed")
     processing_status = ("NEW", "DONE", "UPLOADING...")
 
-    for check_count in xrange(1, 60):
-        logging.debug("Checking for changes to uploaded file status: Attempt {}".format(check_count))
+    retry = True
+    retries = 0
+
+    while retry and retries < MAX_RETRIES
+        sleep_time = round((2^retries) / 100)
+
+        logging.debug(
+            "Checking for changes to upload status: "
+            "Attempt #{}. Wait {} seconds".format(retries, sleep_time)
+        )
+
+        time.sleep(sleep_time)
 
         # We will not run a continuation query.
-        # If you uploaded more than 999 files with the same name, screw you.
+        # If you uploaded more than 999 files with the same name, screw you!
         results = client.service.runNamedQuery(
             projectname, modulename, objecttypename, queryname, filters, start,
             maximumresultcount
@@ -375,7 +392,6 @@ def wait_for_upload(filename, site_url, username, password):
         #
         # So, we will look at all the files and check if ANY of them are in
         # one of the processing status.
-
         found_processing = False
         for result in results.queryResponseHelpers[0]:
             for column in result.queryResponseColumns[0]:
@@ -385,7 +401,6 @@ def wait_for_upload(filename, site_url, username, password):
 
         if not found_processing:
             logging.debug("File appears to be fully processed")
-            break
+            retry = False
 
-        time.sleep(10)
 
