@@ -7,6 +7,7 @@ import time
 import os
 import sys
 import logging
+import re
 
 from argh import arg
 from suds.plugin import MessagePlugin
@@ -91,6 +92,9 @@ def parse_url(url, port='9080'):
     >>> parse_url("localhost:9080")
     'http://localhost:9080'
 
+    >>> parse_url("localhost:8001")
+    'http://localhost:8001'
+
     Alternate default port:
     >>> parse_url("localhost", port=8001)
     'http://localhost:8001'
@@ -123,6 +127,11 @@ def parse_url(url, port='9080'):
         return url # URL is fully qualified. Don't do anything
 
     url = scheme + "://" + url
+
+    # Any ports in the input override the default port.
+    match = re.search(":(\d+)$", url)
+    if match:
+        port = int(match.group(1))
 
     if port and port != 80 and port != 443 and \
        not url.endswith(":" + str(port)):
