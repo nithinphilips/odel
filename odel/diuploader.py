@@ -172,6 +172,8 @@ def upload(url, filename, username="system", password="admin",
     session = requests.Session()
     site_url = normalize_url(parse_url(url, port=9080))
 
+    logging.debug("Normalized URL: {}".format(site_url))
+
     # Try to get Module/Bo/Form from the file name
     if not module or not businessobject or not form:
         module, businessobject, form = parse_filename(filename)
@@ -235,15 +237,16 @@ def upload(url, filename, username="system", password="admin",
         'stateName': 'triDraft',
     }
 
-    # 1. Upload the file contents
+    logging.debug("Uploading the file contents.")
     url = '{}/html/en/default/common/dataUploadFile.jsp'.format(site_url)
     response = session.post(url, params=diparams, files=files)
 
-    # 2. Create the Data Upload job
+    logging.debug("Creating Data Upload record.")
     url = '{}/html/en/default/common/dataSmartUpload.jsp'.format(site_url)
     response = session.post(url, params=diparams)
 
     if wait:
+        logging.debug("Waiting for the processing to complete.")
         wait_for_upload(filenameonly, site_url, username, password)
 
 class MultipartMimeFilter(MessagePlugin):
