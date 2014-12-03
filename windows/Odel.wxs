@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
-    <Product Name='Odel $(var.VERSION)' Id='4b3cafe2-0f8b-4008-9917-4823711678eb' UpgradeCode='6786ab9a-0b6e-4b8c-8a3a-f0b82a2ee588'
+    <Product Name='Odel $(var.VERSION)' Id='6459a903-7cf6-452d-b7c8-3a84c12f0e0f' UpgradeCode='e146fcc6-847d-42a6-8117-d2bcdfd8304b'
         Language='1033' Codepage='1252' Version='1.0.0' Manufacturer='Odel'>
 
         <Package Id='*' Keywords='Installer'
@@ -10,7 +10,7 @@
             InstallerVersion='100' Languages='1033' Compressed='yes' SummaryCodepage='1252' />
 
         <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
-        <Property Id='DiskPrompt' Value="Acme's Foobar 1.0 Installation [1]" />
+        <Property Id='DiskPrompt' Value="Odel 1.0 Installation [1]" />
 
         <Property Id="DISABLEADVTSHORTCUTS" Value="1" />
 
@@ -30,7 +30,7 @@
         <Directory Id='TARGETDIR' Name='SourceDir'>
             <Directory Id='ProgramFilesFolder' Name='PFiles'>
                 <Directory Id='APPLICATIONFOLDER' Name='Odel'>
-                    <Component Id='MainExecutable' Guid='c3a42678-b848-45b5-bdcf-78c77198a480'>
+                    <Component Id='MainExecutable' Guid='77de8675-e836-4158-b672-435bc7bd58c6'>
                         <File Id='odel.exe' Name='odel.exe' DiskId='1' Source='../dist/odel-runner/odel-runner.exe' KeyPath='yes' />
                         <File Id='odel.exe.manifest' Name='odel.exe.manifest' DiskId='1' Source='../dist/odel-runner/odel-runner.exe.manifest'/>
                         <File Id='_ctypes.pyd' DiskId='1' Source='../dist/odel-runner/_ctypes.pyd'/>
@@ -49,11 +49,11 @@
                         <File Id='unicodedata.pyd' DiskId='1' Source='../dist/odel-runner/unicodedata.pyd'/>
                         <File Id='win32api.pyd' DiskId='1' Source='../dist/odel-runner/win32api.pyd'/>
                         <File Id='win32pipe.pyd' DiskId='1' Source='../dist/odel-runner/win32pipe.pyd'/>
-                        <File Id='win34wnet.pyd' DiskId='1'Source='../dist/odel-runner/win32wnet.pyd'/>
+                        <File Id='win34wnet.pyd' DiskId='1' Source='../dist/odel-runner/win32wnet.pyd'/>
                     </Component>
 
                     <Component Id="UpdatePathUser"
-                        Guid="2cb044f4-5bd2-42b1-96b3-9e1964b3f0be">
+                        Guid="28ed3650-96b1-4e91-b69f-3ff0357c588c">
                         <Condition><![CDATA[ ALLUSERS="" OR (ALLUSERS=2 AND (NOT Privileged)) ]]></Condition>
                         <Environment Id="UpdatePathUser" Name="PATH" Action="set"
                         Part="last" Value="[APPLICATIONFOLDER]" System="no" />
@@ -62,7 +62,7 @@
                     </Component>
 
                     <Component Id="UpdatePathMachine"
-                        Guid="5ea6c3cb-db03-45bd-9b48-ad27bd42ecb5">
+                        Guid="2e9fe894-2062-4482-814b-b9004e7fd71a">
                         <Condition><![CDATA[ ALLUSERS=1 OR (ALLUSERS=2 AND Privileged) ]]></Condition>
                         <Environment Id="UpdatePathMachine" Name="PATH" Action="set"
                         Part="last" Value="[APPLICATIONFOLDER]" System="yes" />

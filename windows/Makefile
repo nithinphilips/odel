@@ -1,5 +1,7 @@
 .PHONY: all clean
 
+PROGRAM=Odel
+
 CANDLE=candle
 LIGHT=light
 VERSION=1.0
@@ -13,13 +15,13 @@ VERSION=1.0
 	# Convert to Tab delimited file
 	$(LIGHT) -ext WixUIExtension  $<
 
-Odel.msi: Odel.wixobj
+$(PROGRAM).msi: $(PROGRAM).wixobj
 
-all: Odel.msi
+all: $(PROGRAM).msi
 
-debug: Odel.msi
-	msiexec /i Odel.msi /L*v  Odel_debug.log
+debug: $(PROGRAM).msi
+	msiexec /i $(PROGRAM).msi /L*v  $(PROGRAM)_debug.log
 
 clean:
-	-rm -f Odel.msi Odel.wixobjs
+	-rm -f $(PROGRAM).msi $(PROGRAM).wixobj $(PROGRAM).wixpdb
 
