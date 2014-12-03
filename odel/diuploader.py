@@ -27,7 +27,8 @@ def trim_filename(filename, maxlength=FILE_NAME_MAX_LEN):
 
     If the extension alone is longer than the maxlength, the filename
 
-    >>> trim_filename("There-are-fifty-four-characters-in-this-file-name.txt", maxlength=10)
+    >>> trim_filename("There-are-fifty-four-characters-in-this-file-name.txt",
+    ...               maxlength=10)
     'There-.txt'
     >>> trim_filename("There-.txt", maxlength=10)
     'There-.txt'
@@ -81,8 +82,11 @@ def parse_filename(filename, separator='-'):
     >>> parse_filename("/home/odel/001-triPeople-triPeople-triEmployee.txt")
     ['triPeople', 'triPeople', 'triEmployee']
 
-    File name with full path and a sequence prefix and spaces around the separators:
-    >>> parse_filename("/home/odel/001 - triPeople - triPeople - triEmployee.txt")
+    File name with full path and a sequence prefix and spaces around the
+    separators:
+    >>> parse_filename(
+    ...  "/home/odel/001 - triPeople - triPeople - triEmployee.txt"
+    ... )
     ['triPeople', 'triPeople', 'triEmployee']
 
     If the file name does not have three parts a ValueError is raised:
@@ -99,7 +103,9 @@ def parse_filename(filename, separator='-'):
         results = map(str.strip, results)
         return results
 
-    raise ValueError("The filename must have at least three components separated by '-'.")
+    raise ValueError(
+        "The filename must have at least three components separated by '-'."
+    )
 
 def normalize_url(url):
     """
@@ -167,7 +173,7 @@ def parse_url(url, port='9080'):
     url = scheme + "://" + url
 
     # Any ports in the input override the default port.
-    match = re.search(":(\d+)$", url)
+    match = re.search(r':(\d+)$', url)
     if match:
         port = int(match.group(1))
 
@@ -187,7 +193,7 @@ def parse_url(url, port='9080'):
 @arg('--module', '-m', help="The name of the module to which to upload")
 @arg('--businessobject', '-b',
      help="The name of the business object to which to upload")
-@arg('--action', '-a', 
+@arg('--action', '-a',
      help="The action to apply to the newly created records. "
           "By default the first possible action is applied.")
 @arg('--form', '-f', help="The name of the form to which to upload")
@@ -196,15 +202,17 @@ def parse_url(url, port='9080'):
 @arg('filename', help="The file to upload.")
 @arg('url',
      help="The URL to the TRIRIGA environment. Include any context paths. "
-          "This could be just the hostname. In that case port 9080 will be appended")
+          "This could be just the hostname. In that case port 9080 will be "
+          "appended")
 def upload(url, filename, username="system", password="admin",
-           module=None, businessobject=None, form=None, action=None, wait=False):
+           module=None, businessobject=None, form=None, action=None,
+           wait=False):
     """
     Uploads a file to Tririga Data Integrator.
 
-    The module, businessobject and form arguments are optional if the file is named
-    in the following pattern "<module>-<businessObject>-<form>.txt". Otherwise,
-    you must specify them as arguments.
+    The module, businessobject and form arguments are optional if the file is
+    named in the following pattern "<module>-<businessObject>-<form>.txt".
+    Otherwise, you must specify them as arguments.
     """
 
     session = requests.Session()
@@ -227,9 +235,8 @@ def upload(url, filename, username="system", password="admin",
     )
 
     logging.debug("Uploading to {}({})::{}({})::{}({})".format(
-            module, moduleid, businessobject, businessobjectid, form, formid
-        )
-    )
+        module, moduleid, businessobject, businessobjectid, form, formid
+    ))
 
     if action:
         transition = action
@@ -260,7 +267,17 @@ def upload(url, filename, username="system", password="admin",
 
     files = {'theFile': open(filename, 'rb')}
     filenameonly = os.path.basename(filename)
-    filenameonly = trim_filename(filenameonly)
+
+    trimmed_filename = trim_filename(filenameonly)
+    if trimmed_filename != filenameonly:
+        sys.stdout.write(
+            "File name is too long. It has been shortened to '{}'.\n".format
+            (
+                trimmed_filename
+            )
+        )
+
+    filenameonly = trimmed_filename
 
     diparams = {
         'updateAct': "createSpec",

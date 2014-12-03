@@ -46,6 +46,10 @@ time to change that password lest you get pwned!)::
 
     odel localhost triPeople-triPeople-triEmployee.txt
 
+Tririga has a limitation of 150 characters for all Data Integrator file names.
+If the file name has more than 150 characters, Odel will truncate the file
+name.
+
 Waiting for Processing
 ----------------------
 Normally Odel will terminate as soon as the file is transmitted to Tririga.  It
