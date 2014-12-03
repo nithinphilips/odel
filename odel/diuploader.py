@@ -370,7 +370,7 @@ def wait_for_upload(filename, site_url, username, password):
     retry = True
     retries = 0
 
-    while retry and retries < MAX_RETRIES
+    while retry and retries < MAX_RETRIES:
         sleep_time = round((2^retries) / 100)
 
         logging.debug(
