@@ -13,9 +13,47 @@ from argh import arg
 from suds.plugin import MessagePlugin
 from suds.client import Client
 
+# Maximum length of the file name.
+FILE_NAME_MAX_LEN = 150
+
 TRIRIGA_AUTH_OBJECTID = '1000'
 TRIRIGA_AUTH_LOGIN_ACTIONID = '1005'
 TRIRIGA_AUTH_FORCELOGIN_ACTIONID = '1006'
+
+def trim_filename(filename, maxlength=FILE_NAME_MAX_LEN):
+    """
+    Trim a file name to a maximum length while trying to preserve the
+    extension.
+
+    If the extension alone is longer than the maxlength, the filename
+
+    >>> trim_filename("There-are-fifty-four-characters-in-this-file-name.txt", maxlength=10)
+    'There-.txt'
+    >>> trim_filename("There-.txt", maxlength=10)
+    'There-.txt'
+    >>> trim_filename("There.txt", maxlength=10)
+    'There.txt'
+    >>> trim_filename("There-are.txt", maxlength=10)
+    'There-.txt'
+    >>> trim_filename("a.a-very-long-file-ext", maxlength=10)
+    'a.a-very-l'
+    >>> trim_filename("a-very-long-filename.a-very-long-file-ext", maxlength=10)
+    'a-very-lon'
+    """
+    filename, extension = os.path.splitext(filename)
+
+    if len(extension) >= maxlength:
+        # The extension alone is longer than the maxlength we combine them to
+        # get the first maxlength characters
+        filename = filename + extension
+        extension = ""
+    else:
+        maxlength = maxlength - len(extension)
+
+    if len(filename) > maxlength:
+        filename = filename[:maxlength]
+
+    return filename + extension
 
 def parse_filename(filename, separator='-'):
     """
@@ -220,6 +258,7 @@ def upload(url, filename, username="system", password="admin",
 
     files = {'theFile': open(filename, 'rb')}
     filenameonly = os.path.basename(filename)
+    filenameonly = trim_filename(filenameonly)
 
     diparams = {
         'updateAct': "createSpec",
