@@ -1,0 +1,104 @@
+<?xml version='1.0' encoding='windows-1252'?>
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+    <Product Name='Odel $(var.VERSION)' Id='4b3cafe2-0f8b-4008-9917-4823711678eb' UpgradeCode='6786ab9a-0b6e-4b8c-8a3a-f0b82a2ee588'
+        Language='1033' Codepage='1252' Version='1.0.0' Manufacturer='Odel'>
+
+        <Package Id='*' Keywords='Installer'
+            InstallScope="perMachine"
+            Description="Odel $(var.VERSION) Installer"
+            Comments='Windows Install Package' Manufacturer='Odel'
+            InstallerVersion='100' Languages='1033' Compressed='yes' SummaryCodepage='1252' />
+
+        <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
+        <Property Id='DiskPrompt' Value="Acme's Foobar 1.0 Installation [1]" />
+
+        <Property Id="DISABLEADVTSHORTCUTS" Value="1" />
+
+        <CustomAction Id="SetPerUserFolder" Property="APPLICATIONFOLDER" Value="[LocalAppDataFolder]Odel" Execute="immediate" />
+        <CustomAction Id="SetPerMachineFolder" Property="APPLICATIONFOLDER" Value="[ProgramFilesFolder]Odel" Execute="immediate" />
+
+        <InstallExecuteSequence>
+            <Custom Action="SetPerUserFolder" Before="CostFinalize">ACTION="INSTALL" AND APPLICATIONFOLDER="" AND (ALLUSERS="" OR (ALLUSERS=2 AND (NOT Privileged)))</Custom>
+            <Custom Action="SetPerMachineFolder" After="SetPerUserFolder">ACTION="INSTALL" AND APPLICATIONFOLDER="" AND (ALLUSERS=1 OR (ALLUSERS=2 AND Privileged))</Custom>
+        </InstallExecuteSequence>
+        <InstallUISequence>
+            <Custom Action="SetPerUserFolder" Before="CostFinalize">ACTION="INSTALL" AND APPLICATIONFOLDER="" AND (ALLUSERS="" OR (ALLUSERS=2 AND (NOT Privileged)))</Custom>
+            <Custom Action="SetPerMachineFolder" After="SetPerUserFolder">ACTION="INSTALL" AND APPLICATIONFOLDER="" AND (ALLUSERS=1 OR (ALLUSERS=2 AND Privileged))</Custom>
+        </InstallUISequence>
+
+
+        <Directory Id='TARGETDIR' Name='SourceDir'>
+            <Directory Id='ProgramFilesFolder' Name='PFiles'>
+                <Directory Id='APPLICATIONFOLDER' Name='Odel'>
+                    <Component Id='MainExecutable' Guid='c3a42678-b848-45b5-bdcf-78c77198a480'>
+                        <File Id='odel.exe' Name='odel.exe' DiskId='1' Source='../dist/odel-runner/odel-runner.exe' KeyPath='yes' />
+                        <File Id='odel.exe.manifest' Name='odel.exe.manifest' DiskId='1' Source='../dist/odel-runner/odel-runner.exe.manifest'/>
+                        <File Id='_ctypes.pyd' DiskId='1' Source='../dist/odel-runner/_ctypes.pyd'/>
+                        <File Id='_hashlib.pyd' DiskId='1' Source='../dist/odel-runner/_hashlib.pyd'/>
+                        <File Id='_socket.pyd' DiskId='1' Source='../dist/odel-runner/_socket.pyd'/>
+                        <File Id='_ssl.pyd' DiskId='1' Source='../dist/odel-runner/_ssl.pyd'/>
+                        <File Id='bz2.pyd' DiskId='1' Source='../dist/odel-runner/bz2.pyd'/>
+                        <File Id='Microsoft.VC90.CRT.manifest' DiskId='1' Source='../dist/odel-runner/Microsoft.VC90.CRT.manifest'/>
+                        <File Id='msvcm90.dll' DiskId='1' Source='../dist/odel-runner/msvcm90.dll'/>
+                        <File Id='msvcp90.dll' DiskId='1' Source='../dist/odel-runner/msvcp90.dll'/>
+                        <File Id='msvcr90.dll' DiskId='1' Source='../dist/odel-runner/msvcr90.dll'/>
+                        <File Id='pyexpat.pyd' DiskId='1' Source='../dist/odel-runner/pyexpat.pyd'/>
+                        <File Id='python27.dll' DiskId='1' Source='../dist/odel-runner/python27.dll'/>
+                        <File Id='pywintypes27.dll' DiskId='1' Source='../dist/odel-runner/pywintypes27.dll'/>
+                        <File Id='select.pyd' DiskId='1' Source='../dist/odel-runner/select.pyd'/>
+                        <File Id='unicodedata.pyd' DiskId='1' Source='../dist/odel-runner/unicodedata.pyd'/>
+                        <File Id='win32api.pyd' DiskId='1' Source='../dist/odel-runner/win32api.pyd'/>
+                        <File Id='win32pipe.pyd' DiskId='1' Source='../dist/odel-runner/win32pipe.pyd'/>
+                        <File Id='win34wnet.pyd' DiskId='1'Source='../dist/odel-runner/win32wnet.pyd'/>
+                    </Component>
+
+                    <Component Id="UpdatePathUser"
+                        Guid="2cb044f4-5bd2-42b1-96b3-9e1964b3f0be">
+                        <Condition><![CDATA[ ALLUSERS="" OR (ALLUSERS=2 AND (NOT Privileged)) ]]></Condition>
+                        <Environment Id="UpdatePathUser" Name="PATH" Action="set"
+                        Part="last" Value="[APPLICATIONFOLDER]" System="no" />
+                        <RegistryValue Root="HKCU" Key="Software\Odel"
+                        Name="UserPathUpdated" Type="integer" Value="1" KeyPath="yes"/>
+                    </Component>
+
+                    <Component Id="UpdatePathMachine"
+                        Guid="5ea6c3cb-db03-45bd-9b48-ad27bd42ecb5">
+                        <Condition><![CDATA[ ALLUSERS=1 OR (ALLUSERS=2 AND Privileged) ]]></Condition>
+                        <Environment Id="UpdatePathMachine" Name="PATH" Action="set"
+                        Part="last" Value="[APPLICATIONFOLDER]" System="yes" />
+                        <RegistryValue Root="HKLM" Key="Software\Odel"
+                        Name="SystemPathUpdated" Type="integer" Value="1" KeyPath="yes"/>
+                    </Component>
+                </Directory>
+            </Directory>
+
+            <!-- <Directory Id="ProgramMenuFolder" Name="Programs">
+                <Directory Id="ProgramMenuDir" Name="Foobar 1.0">
+                    <Component Id="ProgramMenuDir" Guid="c3d897d2-8f47-4fa1-9c2c-c2893f292afe">
+                        <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
+                        <RegistryValue Root='HKCU' Key='Software\[Manufacturer]\[ProductName]' Type='string' Value='' KeyPath='yes' />
+                    </Component>
+                </Directory>
+            </Directory> -->
+
+            <Directory Id="DesktopFolder" Name="Desktop" />
+        </Directory>
+
+        <Feature Id='Complete' Title='Foobar 1.0' Description='The complete package.'
+            Display='expand' Level='1' ConfigurableDirectory='APPLICATIONFOLDER'>
+            <Feature Id='MainProgram' Title='Program' Description='The main executable.' Level='1'>
+                <ComponentRef Id='MainExecutable' />
+                <ComponentRef Id="UpdatePathUser" />
+                <ComponentRef Id="UpdatePathMachine" />
+            </Feature>
+        </Feature>
+
+        <Property Id="WIXUI_INSTALLDIR" Value="APPLICATIONFOLDER" />
+        <UIRef Id="WixUI_InstallDir" />
+        <UIRef Id="WixUI_ErrorProgressText" />
+        <WixVariable Id="WixUILicenseRtf" Value="..\COPYING.rtf" />
+
+        <!-- <Icon Id="Icon" SourceFile="../dist/tririga/tririga.exe" /> -->
+
+    </Product>
+</Wix>
