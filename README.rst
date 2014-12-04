@@ -37,14 +37,14 @@ to ``triPeople-triPeople-triEmployee.txt``, you can run::
          http://localhost:9080/ triPeople-triPeople-triEmployee.txt
 
 Odel will parse the file name to get the necessary information. See `File
-Naming Convention` below for more details.
+Naming Conventions`_ below for more details.
 
 The url portion may be shortened to just the server name::
 
     odel --username=system --password=admin \
          localhost:9080 triPeople-triPeople-triEmployee.txt
 
-The port can be removed as well. See `URL Naming Convention` below for more.
+The port can be removed as well. See `URL Naming Conventions`_ below for more.
 
 The username and password default to ``system`` and ``admin``, so those can
 also be omitted (also now is a good time to change that password lest you get
@@ -53,8 +53,8 @@ pwned!)::
     odel localhost triPeople-triPeople-triEmployee.txt
 
 
-File Naming Convention
-----------------------
+File Naming Conventions
+-----------------------
 If you name your DI files appropriately, Odel can detect a lot of information
 required to upload the data from the file name. It is also a good practice to
 name your DI files consistently.
@@ -84,8 +84,8 @@ Tririga has a limitation of 150 characters for all Data Integrator file names.
 If the file name has more than 150 characters, Odel will truncate the file
 name.
 
-URL Naming Convention
----------------------
+URL Naming Conventions
+----------------------
 Odel is fairly flexible in handling URL values. Here's what you can enter:
 
 Scheme, host and port:
