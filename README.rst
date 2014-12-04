@@ -1,11 +1,14 @@
 Odel
 ====
-Odel uploads Data Integrator files to Tririga from the command-line.
+Odel uploads Data Integrator files to Tririga from the command-line. You can
+import the files quickly and easily with Odel. It can also be called from
+script as part of a batch process.
 
-You can import the files quickly and easily with Odel. It can also be called
-from script as part of a batch process.
+An installer is available for Windows. Download it from the *Releases* section.
+Once installed, you will have the ``odel`` command available in your Command
+Prompt.
 
-Get started by installing Odel::
+If you have python installed, download the source and install Odel::
 
     python setup.py install
 
@@ -33,29 +36,81 @@ to ``triPeople-triPeople-triEmployee.txt``, you can run::
     odel --username=system --password=admin \
          http://localhost:9080/ triPeople-triPeople-triEmployee.txt
 
-Odel will parse the file name to get the necessary information.
+Odel will parse the file name to get the necessary information. See `File
+Naming Conventions`_ below for more details.
 
-The url portion may be shortend to just the server name::
+The url portion may be shortened to just the server name::
 
     odel --username=system --password=admin \
          localhost:9080 triPeople-triPeople-triEmployee.txt
 
-The port can be removed as well. The username and password default to 
-``system`` and ``admin``, so those can also be omitted (also now is a good
-time to change that password lest you get pwned!)::
+The port can be removed as well. See `URL Naming Conventions`_ below for more.
+
+The username and password default to ``system`` and ``admin``, so those can
+also be omitted (also now is a good time to change that password lest you get
+pwned!)::
 
     odel localhost triPeople-triPeople-triEmployee.txt
+
+
+File Naming Conventions
+-----------------------
+If you name your DI files appropriately, Odel can detect a lot of information
+required to upload the data from the file name. It is also a good practice to
+name your DI files consistently.
+
+Odel parses the file name like this:
+
+1) Split the filename into parts, where each part is separated by a "-"
+2) Take the last three parts, assume they are Module, Business Object and Form
+   names, in that order.
+
+So, you can have additional information in the file name, as long as the information
+Odel is looking for is at the very end.
+
+These are examples of files names for Employee Data. Odel parses all these as
+Module = triPeople, Business Object = triPeople, Form = triEmployee
+
+Simple:
+ ``triPeople-triPeople-triEmployee.txt``
+With spaces around the ``-``:
+ ``triPeople - triPeople - triEmployee.txt``
+With a prefix:
+ ``IterationA - triPeople-triPeople-triEmployee.txt``
+With two prefixes:
+ ``001 - IterationA - triPeople-triPeople-triEmployee.txt``
 
 Tririga has a limitation of 150 characters for all Data Integrator file names.
 If the file name has more than 150 characters, Odel will truncate the file
 name.
+
+URL Naming Conventions
+----------------------
+Odel is fairly flexible in handling URL values. Here's what you can enter:
+
+Scheme, host and port:
+ ``http://tririga.example.com:9080/``
+Host and port:
+ ``tririga.example.com:9080``. This resolves to
+ ``http://tririga.example.com:9080/``
+Host only:
+ ``tririga.example.com``. This resolves to 
+ ``http://tririga.example.com:9080/``.
+
+Odel uses port 9080 as the default. This is the default WebSphere application
+virtual host port.
+
+There are two special cases. If you enter ``tririga.example.com:443``, it
+resolves to ``https://tririga.example.com/``. Note the HTTPS scheme. If you
+enter ``tririga.example.com:80``, Odel resolves this to
+``http://tririga.example.com/``. This is plain HTTP and the port is omitted.
 
 Waiting for Processing
 ----------------------
 Normally Odel will terminate as soon as the file is transmitted to Tririga.  It
 will still take a few minutes for Tririga to process the file and create the
 records. Often, when running as part of a batch process you will want to wait
-until the file is processed before performing the next task. 
+until the file is processed before performing the next task.
 
 If the ``-w`` flag is set, Odel will wait until Tririga changes the data upload
 status to *Rollup All Completed* or *Failed*, indicating the completion of the
