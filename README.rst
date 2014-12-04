@@ -4,9 +4,9 @@ Odel uploads Data Integrator files to Tririga from the command-line. You can
 import the files quickly and easily with Odel. It can also be called from
 script as part of a batch process.
 
-An installer is available for Windows. Download it from the *Releases* section.
-Once installed, you will have the ``odel`` command available in your Command
-Prompt.
+An installer is available for Windows. Download it from the `Releases
+<https://github.com/nithinphilips/odel/releases>`_ section.  Once installed,
+you will have the ``odel`` command available in your Command Prompt.
 
 If you have python installed, download the source and install Odel::
 
