@@ -52,7 +52,6 @@ pwned!)::
 
     odel localhost triPeople-triPeople-triEmployee.txt
 
-
 File Naming Conventions
 -----------------------
 If you name your DI files appropriately, Odel can detect a lot of information
@@ -162,6 +161,25 @@ the status changes. When the status changes Odel will quit. If the file is not
 processed in about 10 minutes Odel will simply give up. This can happen with
 very large files or more commonly if the ``Data Integrator`` agent is not
 running on the host where the file was uploaded.
+
+Building Windows Installer
+--------------------------
+Windows installer can be built on Windows machines. You will need Python 2.7 (Windows version)
+and the ``pyinstaller`` package (version 2.0).
+
+
+1. From the project root run::
+
+    make
+
+   This will build the binaries.
+
+2. Change directory to the ``windows`` folder and run make again::
+
+    cd windows/
+    make
+
+   This will build the ``.msi`` installer.
 
 License
 -------
