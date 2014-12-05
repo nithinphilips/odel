@@ -13,8 +13,8 @@ from argh import arg
 from suds.plugin import MessagePlugin
 from suds.client import Client
 
-# Maximum length of the file name.
-FILE_NAME_MAX_LEN = 150
+# Maximum length of the file name allowed by TRIRIGA Data Integrator.
+FILE_NAME_MAX_LEN = 50
 
 TRIRIGA_AUTH_OBJECTID = '1000'
 TRIRIGA_AUTH_LOGIN_ACTIONID = '1005'

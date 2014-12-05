@@ -82,9 +82,8 @@ With a prefix:
 With two prefixes:
  ``001 - IterationA - triPeople-triPeople-triEmployee.txt``
 
-Tririga has a limitation of 150 characters for all Data Integrator file names.
-If the file name has more than 150 characters, Odel will truncate the file
-name.
+Tririga has a limitation of 50 characters for all Data Integrator file names.
+If the file name has more than 50 characters, Odel will truncate the file name.
 
 URL Naming Conventions
 ----------------------
