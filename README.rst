@@ -8,7 +8,10 @@ An installer is available for Windows. Download it from the `Releases
 <https://github.com/nithinphilips/odel/releases>`_ section.  Once installed,
 you will have the ``odel`` command available in your Command Prompt.
 
-If you have python installed, download the source and install Odel::
+Getting Started
+---------------
+If you have python installed, download the source and install Odel and its
+dependencies::
 
     python setup.py install
 

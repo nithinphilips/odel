@@ -195,7 +195,9 @@ def parse_url(url, port='9080'):
      help="The name of the business object to which to upload")
 @arg('--action', '-a',
      help="The action to apply to the newly created records. "
-          "By default the first possible action is applied.")
+          "By default the first possible action is applied. "
+          "If an invalid action is specified, Odel will warn "
+          "you and attempt to continue.")
 @arg('--form', '-f', help="The name of the form to which to upload")
 @arg('--username', '-u', help="Your tririga username.")
 @arg('--password', '-p', help="Your tririga password.")
@@ -213,6 +215,9 @@ def upload(url, filename, username="system", password="admin",
     The module, businessobject and form arguments are optional if the file is
     named in the following pattern "<module>-<businessObject>-<form>.txt".
     Otherwise, you must specify them as arguments.
+
+    Action is also optional. If it is omitted, Odel will retrive a list of
+    applicable actions and use the first one.
     """
 
     session = requests.Session()
