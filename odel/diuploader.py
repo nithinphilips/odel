@@ -432,7 +432,7 @@ def wait_for_upload(filename, site_url, username, password):
     retries = 0
 
     while retry and retries < MAX_RETRIES:
-        sleep_time = round((2^retries) / 100)
+        sleep_time = 2**retries / float(10)
 
         logging.debug(
             "Checking for changes to upload status: "
@@ -463,5 +463,7 @@ def wait_for_upload(filename, site_url, username, password):
         if not found_processing:
             logging.debug("File appears to be fully processed")
             retry = False
+
+        retries = retries + 1
 
 
