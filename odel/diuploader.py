@@ -89,6 +89,17 @@ def parse_filename(filename, separator='-'):
     ... )
     ['triPeople', 'triPeople', 'triEmployee']
 
+
+    This method handles one special case. If the file does not have a three
+    part identifier, but contains the work PatchHelper, it will return the
+    info for the TRIRIGA Patch Helper module:
+    >>> parse_filename("/home/odel/PatchHelper_UpgradeApp.txt")
+    ['triHelper', 'triPatchHelper', 'triPatchHelper']
+
+    It is not case sensitive or position dependent:
+    >>> parse_filename("/home/odel/UpgradeApp_patchhelper.txt")
+    ['triHelper', 'triPatchHelper', 'triPatchHelper']
+
     If the file name does not have three parts a ValueError is raised:
     >>> parse_filename("/home/odel/badname.xlsx")
     Traceback (most recent call last):
@@ -102,6 +113,9 @@ def parse_filename(filename, separator='-'):
     if len(results) == 3:
         results = map(str.strip, results)
         return results
+
+    if "patchhelper" in basename.lower():
+        return ['triHelper', 'triPatchHelper', 'triPatchHelper']
 
     raise ValueError(
         "The filename must have at least three components separated by '-'."
