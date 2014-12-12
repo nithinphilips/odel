@@ -10,7 +10,7 @@ you will have the ``odel`` command available in your Command Prompt.
 
 Getting Started
 ---------------
-If you have python installed, download the source and install Odel and its
+If you have Python installed, download the source and install Odel and its
 dependencies::
 
     python setup.py install
@@ -39,27 +39,27 @@ to ``triPeople-triPeople-triEmployee.txt``, you can run::
     odel --username=system --password=admin \
          http://localhost:9080/ triPeople-triPeople-triEmployee.txt
 
-Odel will parse the file name to get the necessary information. See `File
-Naming Conventions`_ below for more details.
+Odel will parse the file name to get the type information. See `File Naming
+Conventions`_ below for more details.
 
 The url portion may be shortened to just the server name::
 
     odel --username=system --password=admin \
          localhost:9080 triPeople-triPeople-triEmployee.txt
 
-The port can be removed as well. See `URL Naming Conventions`_ below for more.
+The port can be removed as well. 9080 will be used as the deafult. See `URL
+Naming Conventions`_ below for more.
 
 The username and password default to ``system`` and ``admin``, so those can
-also be omitted (also now is a good time to change that password lest you get
-pwned!)::
+also be omitted (also now is a good time to change that password!)::
 
     odel localhost triPeople-triPeople-triEmployee.txt
 
 File Naming Conventions
 -----------------------
-If you name your DI files appropriately, Odel can detect a lot of information
-required to upload the data from the file name. It is also a good practice to
-name your DI files consistently.
+If you name your DI files appropriately, Odel can detect the type information
+required to upload the file to TRIRIGA. It is also a good practice to name your
+DI files consistently.
 
 Odel parses the file name like this:
 
@@ -82,8 +82,18 @@ With a prefix:
 With two prefixes:
  ``001 - IterationA - triPeople-triPeople-triEmployee.txt``
 
+If the regular parsing of three part file name fails, Odel will try a keyword
+search to guess the type of the file. Only a single keyword is currently
+searched. Keyword search is NOT case sensitive.
+
+Patch Helpers:
+ Searched for the word ``patchhelper``. For example,
+ ``PatchHelper_UpgradeApplication.txt`` will parse to Module = triHelper,
+ Business Object = triPatchHelper, Form = triPatchHelper.
+
 Tririga has a limitation of 50 characters for all Data Integrator file names.
-If the file name has more than 50 characters, Odel will truncate the file name.
+If the file name has more than 50 characters, Odel will truncate the file name
+to fit the limits.
 
 URL Naming Conventions
 ----------------------
@@ -109,60 +119,16 @@ enter ``tririga.example.com:80``, Odel resolves this to
 Waiting for Processing
 ----------------------
 Normally Odel will terminate as soon as the file is transmitted to Tririga.  It
-will still take a few minutes for Tririga to process the file and create the
-records. Often, when running as part of a batch process you will want to wait
-until the file is processed before performing the next task.
+will take Tririga a few minutes to process the file and create the records.
+Often, when running as part of a batch process you will want to wait until the
+file is processed before performing the next task.
 
 If the ``-w`` flag is set, Odel will wait until Tririga changes the data upload
 status to *Rollup All Completed* or *Failed*, indicating the completion of the
 upload process.
 
-How it Works
-------------
-Tririga does not provide a public API to upload files through Data Integrator.
-To make Odel work we simulate an interactive user session. Odel uses a
-combination of BusinessConnect (SOAP API) and web scraping to do its job.
-
-The first use for the SOAP API is to turn the module, business object and form
-names into IDs. The Data Integrator feature expects IDs rather than string
-values. In the Tririga web interface, these fields are populated using
-Javascript. Odel does not execute any Javascript, so the SOAP API fills in the
-gap.
-
-Odel also retrieves the list possible *State Transitions* using the SOAP API.
-These are state transitions that originate from a *null* record. If the user
-did not specify a state transition using the ``--action`` argument the first
-possible state transition is selected.
-
-Next, Odel simulates a Tririga user login. It uses the *force* login option
-(same as clicking the "remove active session" link in the login page) to make
-sure the login always succeeds. This has the effect of ending any other active
-sessions for the Tririga user account. Once logged in the next step is to
-upload the file. Data Integrator works in two steps. Step one sends the file
-data to tririga. Step two sends the commands necessary to start the file
-processing. Tririga takes care of matching up the file contents and the
-processing commands.
-
-If the user did not specify the ``--wait`` option, Odel will then quit.
-
-If the ``--wait`` option is on, Odel needs to find out if the records that were
-just uploaded have been processed. Tririga processes Data Integrator uploads
-asynchronously. In the web interface the user will get a notification when the
-processing is complete. Checking the user's notifications is one possible
-method to see if the upload completed. It is however more reliable to check the
-Data Upload records themselves. So Odel invokes the ``runNamedQuery`` SOAP
-operation to run the ``Data Upload - System - Manager Query`` query. Odel
-passes in the file name as a dynamic filter to limit the number of records
-returned.
-
-Odel checks all the returned records (there could be more than one if another
-file with the same name was uploaded previously) to see if any of them are in
-one of the processing statuses (``NEW``, ``DONE`` or ``UPLOADING...``.) If they
-are, Odel waits a few seconds and checks again. It repeats the process until
-the status changes. When the status changes Odel will quit. If the file is not
-processed in about 10 minutes Odel will simply give up. This can happen with
-very large files or more commonly if the ``Data Integrator`` agent is not
-running on the host where the file was uploaded.
+This only waits for creation of records. Tririga may still continue to process
+*Associate* and other asynchronous tasks in the background.
 
 Building Windows Installer
 --------------------------
