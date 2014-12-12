@@ -4,7 +4,9 @@ PROGRAM=Odel
 
 CANDLE=candle
 LIGHT=light
-VERSION=0.2.0
+VERSION=0.3.0
+
+MSI_NAME="$(PROGRAM)-$(VERSION)"
 
 %.wixobj: %.wxs
 	# Convert to Tab delimited file
@@ -17,7 +19,10 @@ VERSION=0.2.0
 
 $(PROGRAM).msi: $(PROGRAM).wixobj
 
-all: $(PROGRAM).msi
+all: $(MSI_NAME).msi
+
+$(MSI_NAME).msi: $(PROGRAM).msi
+	mv $< $@
 
 debug: $(PROGRAM).msi
 	msiexec /i $(PROGRAM).msi /L*v  $(PROGRAM)_debug.log
