@@ -379,6 +379,9 @@ def get_object_info(module, businessobject, form, site_url, username, password):
             guiid = gui.id
             break
 
+    if guiid <= 0:
+        raise ValueError("The form '{}' does not exist.".format(form))
+
     transitions = []
     actions = client.service.getObjectTypeActions(moduleid, objectid, -1, -1)[0]
     for action in actions:
