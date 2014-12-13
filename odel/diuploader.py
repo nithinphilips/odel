@@ -114,7 +114,10 @@ def parse_filename(filename, separator='-'):
         results = map(str.strip, results)
         return results
 
+    logging.debug("No type information in the file name")
+
     if "patchhelper" in basename.lower():
+        logging.debug("File name matches keyword: patchhelper")
         return ['triHelper', 'triPatchHelper', 'triPatchHelper']
 
     raise ValueError(
@@ -442,15 +445,16 @@ def wait_for_upload(filename, site_url, username, password):
     ok_status = ("Rollup All Completed", "Failed")
     processing_status = ("NEW", "DONE", "UPLOADING...")
 
+    total_sleep_time = 0
     retry = True
     retries = 0
 
     while retry and retries < MAX_RETRIES:
         sleep_time = 2**retries / 100.0
+        total_sleep_time = total_sleep_time + sleep_time
 
         logging.debug(
-            "Checking for changes to upload status: "
-            "Attempt #{}. Wait {} seconds".format(retries, sleep_time)
+            "Upload status check #{}: Wait {} seconds".format(retries, sleep_time)
         )
 
         time.sleep(sleep_time)
@@ -479,5 +483,7 @@ def wait_for_upload(filename, site_url, username, password):
             retry = False
 
         retries = retries + 1
+
+    logging.debug("File processed in about {} seconds".format(total_sleep_time))
 
 
