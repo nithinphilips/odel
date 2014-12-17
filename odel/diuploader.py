@@ -189,6 +189,9 @@ def parse_url(url, port='9080'):
     >>> parse_url("http://localhost:9080/context_path")
     'http://localhost:9080/context_path'
 
+    >>> parse_url("HTTP://localhost:9080/context_path")
+    'HTTP://localhost:9080/context_path'
+
     Host name and port 80:
     >>> parse_url("localhost", port=80)
     'http://localhost'
@@ -196,26 +199,41 @@ def parse_url(url, port='9080'):
     Host name and port 443:
     >>> parse_url("localhost", port=443)
     'https://localhost'
+
+    >>> parse_url("localhost:443", port=9080)
+    'https://localhost'
     """
 
     # Port argument may be given as a string or int
     port = int(port)
 
-    scheme = "https" if port == 443 else "http"
-
-    if url.startswith("http://") or url.startswith("https://"):
-        return url # URL is fully qualified. Don't do anything
-
-    url = scheme + "://" + url
+    if re.match(r'^https?://', url, re.IGNORECASE):
+        return url
 
     # Any ports in the input override the default port.
-    match = re.search(r':(\d+)$', url)
-    if match:
-        port = int(match.group(1))
+    match = re.search(r'(?P<host>[^:/]+)(:(?P<port>\d+))?(?P<path>/.*)?', url)
+    if not match:
+        raise ValueError(
+            "The give URL value {} is not fully qualified and cannot be "
+            "parsed".format(url)
+        )
 
-    if port and port != 80 and port != 443 and \
-       not url.endswith(":" + str(port)):
+    hostname = match.group('host')
+    userport = match.group('port')
+    path = match.group('path')
+
+    if userport:
+        port = int(userport)
+
+    scheme = "https" if port == 443 else "http"
+
+    url = scheme + "://" + hostname
+
+    if port not in (443, 80):
         url = url + ":" + str(port)
+
+    if path:
+        url = url + path
 
     return url
 
