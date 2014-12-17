@@ -87,7 +87,7 @@ search to guess the type of the file. Only a single keyword is currently
 searched. Keyword search is NOT case sensitive.
 
 Patch Helpers:
- Searched for the word ``patchhelper``. For example,
+ Searches for the word ``patchhelper``. For example,
  ``PatchHelper_UpgradeApplication.txt`` will parse to Module = triHelper,
  Business Object = triPatchHelper, Form = triPatchHelper.
 
@@ -125,7 +125,7 @@ process.
 This only waits for creation of records. Tririga may still continue to process
 *Associate* and other asynchronous tasks in the background.
 
-To disable this a quit as soon as the upload is complete, specify the
+To disable this and quit as soon as the upload is complete, specify the
 ``-no-wait``` flag.
 
 Building Windows Installer
