@@ -118,17 +118,15 @@ enter ``tririga.example.com:80``, Odel resolves this to
 
 Waiting for Processing
 ----------------------
-Normally Odel will terminate as soon as the file is transmitted to Tririga.  It
-will take Tririga a few minutes to process the file and create the records.
-Often, when running as part of a batch process you will want to wait until the
-file is processed before performing the next task.
-
-If the ``-w`` flag is set, Odel will wait until Tririga changes the data upload
-status to *Rollup All Completed* or *Failed*, indicating the completion of the
-upload process.
+By default Odel will wait until Tririga changes the data upload status to
+*Rollup All Completed* or *Failed*, indicating the completion of the upload
+process.
 
 This only waits for creation of records. Tririga may still continue to process
 *Associate* and other asynchronous tasks in the background.
+
+To disable this a quit as soon as the upload is complete, specify the
+``-no-wait``` flag.
 
 Building Windows Installer
 --------------------------

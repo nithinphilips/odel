@@ -239,10 +239,9 @@ def parse_url(url, port='9080'):
 
 
 @arg(
-    '--wait', '-w',
-    help="Wait and keep running until the file is processed by Tririga. Odel "
-         "will poll Tririga to check the record status. Useful for batch "
-         "processing"
+    '--no-wait', '-w',
+    help="Do not Wait until the file is processed by Tririga. By default Odel "
+         "will wait until Tririga has fully processed the file.",
 )
 @arg('--module', '-m', help="The name of the module to which to upload")
 @arg('--businessobject', '-b',
@@ -262,7 +261,7 @@ def parse_url(url, port='9080'):
           "appended")
 def upload(url, filename, username="system", password="admin",
            module=None, businessobject=None, form=None, action=None,
-           wait=False):
+           no_wait=False):
     """
     Uploads a file to Tririga Data Integrator.
 
@@ -361,9 +360,13 @@ def upload(url, filename, username="system", password="admin",
     url = '{}/html/en/default/common/dataSmartUpload.jsp'.format(site_url)
     response = session.post(url, params=diparams)
 
-    if wait:
+    ecode = 0
+
+    if not no_wait:
         logging.debug("Waiting for the processing to complete.")
-        wait_for_upload(filenameonly, site_url, username, password)
+        ecode = wait_for_upload(filenameonly, site_url, username, password)
+
+    sys.exit(ecode)
 
 class MultipartMimeFilter(MessagePlugin):
     """
@@ -483,12 +486,20 @@ def wait_for_upload(filename, site_url, username, password):
     start = 1
     maximumresultcount = 999
 
-    ok_status = ("Rollup All Completed", "Failed")
+    status_codes = {
+        "Rollup All Completed": 0,
+        "Failed": 10,
+        "NEW": 20,
+        "DONE": 30,
+        "UPLOADING...": 40
+    }
+
     processing_status = ("NEW", "DONE", "UPLOADING...")
 
     total_sleep_time = 0
     retry = True
     retries = 0
+    last_status = None
 
     while retry and retries < MAX_RETRIES:
         sleep_time = 2**retries / 100.0
@@ -519,6 +530,7 @@ def wait_for_upload(filename, site_url, username, password):
                     logging.debug("Uploaded record status: {}".format(column.value))
                     if column.value in processing_status:
                         found_processing = True
+                    last_status = column.value
 
         if not found_processing:
             logging.debug("File appears to be fully processed")
@@ -528,4 +540,5 @@ def wait_for_upload(filename, site_url, username, password):
 
     logging.debug("File processed in about {} seconds".format(total_sleep_time))
 
+    return status_codes[last_status]
 
