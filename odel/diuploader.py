@@ -287,7 +287,6 @@ def upload(url, filename, username="system", password="admin",
     url = '{}/WebProcess.srv'.format(site_url)
     response = session.post(url, data=authpayload, allow_redirects=False)
 
-    files = {'theFile': open(filename, 'rb')}
     filenameonly = os.path.basename(filename)
 
     trimmed_filename = trim_filename(filenameonly)
@@ -314,6 +313,8 @@ def upload(url, filename, username="system", password="admin",
         'actionName': transition,
         'stateName': 'triDraft',
     }
+
+    files = {'theFile': (filenameonly, open(filename, 'rb'))}
 
     logging.debug("Uploading the file contents.")
     url = '{}/html/en/default/common/dataUploadFile.jsp'.format(site_url)
@@ -478,6 +479,7 @@ def wait_for_upload(filename, site_url, username, password):
         for result in results.queryResponseHelpers[0]:
             for column in result.queryResponseColumns[0]:
                 if column.name == "Status":
+                    logging.debug("Uploaded record status: {}".format(column.value))
                     if column.value in processing_status:
                         found_processing = True
 
