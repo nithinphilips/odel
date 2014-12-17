@@ -25,17 +25,25 @@ def trim_filename(filename, maxlength=FILE_NAME_MAX_LEN):
     Trim a file name to a maximum length while trying to preserve the
     extension.
 
-    If the extension alone is longer than the maxlength, the filename
+    If the extension alone is longer than the maxlength, the extension
+    may be shortened or removed altogether.
 
     >>> trim_filename("There-are-fifty-four-characters-in-this-file-name.txt",
     ...               maxlength=10)
     'There-.txt'
+    >>> trim_filename("There-are.txt", maxlength=10)
+    'There-.txt'
+
+    No trimming is necessary if the file length is less than or equal to the
+    max length:
+
     >>> trim_filename("There-.txt", maxlength=10)
     'There-.txt'
     >>> trim_filename("There.txt", maxlength=10)
     'There.txt'
-    >>> trim_filename("There-are.txt", maxlength=10)
-    'There-.txt'
+
+    If the extension is very long it may be removed or trimmed:
+
     >>> trim_filename("a.a-very-long-file-ext", maxlength=10)
     'a.a-very-l'
     >>> trim_filename("a-very-long-filename.a-very-long-file-ext", maxlength=10)
@@ -90,7 +98,7 @@ def parse_filename(filename, separator='-'):
     ['triPeople', 'triPeople', 'triEmployee']
 
 
-    This method handles one special case. If the file does not have a three
+    This method handles a special case. If the file does not have a three
     part identifier, but contains the work PatchHelper, it will return the
     info for the TRIRIGA Patch Helper module:
     >>> parse_filename("/home/odel/PatchHelper_UpgradeApp.txt")
@@ -156,6 +164,14 @@ def parse_url(url, port='9080'):
     >>> parse_url("localhost:8001")
     'http://localhost:8001'
 
+    Host name, port and context path
+    >>> parse_url("localhost:9080/context_path")
+    'http://localhost:9080/context_path'
+
+    Host name and context path
+    >>> parse_url("localhost/context_path")
+    'http://localhost:9080/context_path'
+
     Alternate default port:
     >>> parse_url("localhost", port=8001)
     'http://localhost:8001'
@@ -170,6 +186,9 @@ def parse_url(url, port='9080'):
     >>> parse_url("http://localhost:9080")
     'http://localhost:9080'
 
+    >>> parse_url("http://localhost:9080/context_path")
+    'http://localhost:9080/context_path'
+
     Host name and port 80:
     >>> parse_url("localhost", port=80)
     'http://localhost'
@@ -179,7 +198,7 @@ def parse_url(url, port='9080'):
     'https://localhost'
     """
 
-    # Port argument can be a string or int
+    # Port argument may be given as a string or int
     port = int(port)
 
     scheme = "https" if port == 443 else "http"
