@@ -488,9 +488,12 @@ def wait_for_upload(filename, site_url, username, password):
     start = 1
     maximumresultcount = 999
 
+    upload_id = -1
+
     status_codes = {
         "Rollup All Completed": 0,
         "Failed": 10,
+        "FAILED": 10,
         "NEW": 20,
         "DONE": 30,
         "UPLOADING...": 40
@@ -501,7 +504,6 @@ def wait_for_upload(filename, site_url, username, password):
     total_sleep_time = 0
     retry = True
     retries = 0
-    last_status = None
     sequential_soap_err_ct = 0
 
     while retry and retries < MAX_RETRIES:
@@ -520,16 +522,16 @@ def wait_for_upload(filename, site_url, username, password):
         # If you uploaded more than 999 files with the same name, screw you!
         try:
             results = client.service.runNamedQuery(
-                projectname, modulename, objecttypename, queryname, filters, start,
-                maximumresultcount
+                projectname, modulename, objecttypename, queryname, filters,
+                start, maximumresultcount
             )
             sequential_soap_err_ct = 0
-        except suds.WebFault as e:
+        except suds.WebFault as error:
             # Wait and try again in case of an exception
             logging.warn(
                 "Error occurred while checking upload "
                 "status. SOAP failure #{}".format(sequential_soap_err_ct),
-                exc_info=e)
+                exc_info=error)
 
             sequential_soap_err_ct = sequential_soap_err_ct + 1
 
@@ -539,29 +541,66 @@ def wait_for_upload(filename, site_url, username, password):
             retries = retries + 1
             continue
 
-        # It is possible that there is more than one file with the same name.
-        # And we do not have a way to reliably tell which one is ours.
-        #
-        # So, we will look at all the files and check if ANY of them are in
-        # one of the processing status.
-        found_processing = False
-        for result in results.queryResponseHelpers[0]:
-            for column in result.queryResponseColumns[0]:
-                if column.name == "Status":
-                    logging.debug(
-                        "Uploaded record status: {}".format(column.value)
-                    )
-                    if column.value in processing_status:
-                        found_processing = True
-                    last_status = column.value
+        di_records = query_response_to_dict(results)
 
-        if not found_processing:
-            logging.debug("File appears to be fully processed")
-            retry = False
+        for di_record in di_records:
+            if upload_id == -1:
+                # Try to determine which record we just uploaded
+                record_ids = [x["recordId"] for x in di_records]
+                max_record_id = max(record_ids)
+
+                logging.debug(
+                    "Looking for record with ID {}".format(max_record_id)
+                )
+
+                if di_record["Status"] in processing_status \
+                 and di_record["recordId"] == max_record_id:
+                    upload_id = di_record["recordId"]
+                    logging.info(
+                        "The ID of the uploaded record was "
+                        "determined to be {}".format(upload_id)
+                    )
+                else:
+                    logging.debug(
+                        "Record {}, Status {} is not our upload.".format(
+                            di_record["recordId"], di_record["Status"]
+                        )
+                    )
+                    continue
+
+            if di_record["recordId"] != upload_id:
+                continue
+
+            logging.debug(
+                "Uploaded record status: {}".format(di_record["Status"])
+            )
+
+            if di_record["Status"] not in processing_status:
+                logging.debug("File appears to be fully processed")
+                logging.debug(
+                    "File processed in about {} "
+                    "seconds".format(total_sleep_time)
+                )
+                return status_codes[di_record["Status"]]
 
         retries = retries + 1
 
-    logging.debug("File processed in about {} seconds".format(total_sleep_time))
+def query_response_to_dict(results):
+    """
+    Convert a TRIRIGA SOAP QueryResponseHelper object to an array of dicts,
+    keyed by the column name.
 
-    return status_codes[last_status]
+    The record's ID will be included with the key "recordId"
+    """
+    arr_results = []
+    for result in results.queryResponseHelpers[0]:
+        dict_result = dict()
 
+        dict_result["recordId"] = result.recordId
+
+        for column in result.queryResponseColumns[0]:
+            dict_result[column.name] = column.value
+
+        arr_results.append(dict_result)
+
+    return arr_results
