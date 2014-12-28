@@ -4,17 +4,24 @@ Odel uploads Data Integrator files to Tririga from the command-line. You can
 import the files quickly and easily with Odel. It can also be called from
 script as part of a batch process.
 
+
+Getting Started
+---------------
+Windows Users
+~~~~~~~~~~~~~
 An installer is available for Windows. Download it from the `Releases
 <https://github.com/nithinphilips/odel/releases>`_ section.  Once installed,
 you will have the ``odel`` command available in your Command Prompt.
 
-Getting Started
----------------
-If you have Python installed, download the source and install Odel and its
+All Other Platforms
+~~~~~~~~~~~~~~~~~~~
+Install Python 2.7. Download the source and install Odel and its
 dependencies::
 
     python setup.py install
 
+Basic Usage
+~~~~~~~~~~~
 Once installed, odel can be invoked using the ``odel`` command::
 
     odel --help
@@ -54,6 +61,9 @@ The username and password default to ``system`` and ``admin``, so those can
 also be omitted (also now is a good time to change that password!)::
 
     odel localhost triPeople-triPeople-triEmployee.txt
+
+Note that TRIRIGA processes uploads one at a time. So, if another user uploads
+a file around the same time as you, your upload may appear to hang.
 
 File Naming Conventions
 -----------------------
