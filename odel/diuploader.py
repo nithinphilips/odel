@@ -8,8 +8,10 @@ import os
 import sys
 import logging
 import re
+import suds
 
 from argh import arg
+
 from suds.plugin import MessagePlugin
 from suds.client import Client
 
@@ -451,7 +453,7 @@ DATATYPE_DATE = 330
 DATATYPE_DATETIME = 335
 
 MAX_RETRIES = 23
-
+MAX_SOAP_RETRIES = 10
 
 def wait_for_upload(filename, site_url, username, password):
     """
@@ -500,23 +502,42 @@ def wait_for_upload(filename, site_url, username, password):
     retry = True
     retries = 0
     last_status = None
+    sequential_soap_err_ct = 0
 
     while retry and retries < MAX_RETRIES:
         sleep_time = 2**retries / 100.0
         total_sleep_time = total_sleep_time + sleep_time
 
         logging.debug(
-            "Upload status check #{}: Wait {} seconds".format(retries, sleep_time)
+            "Upload status check #{}: Wait {} seconds".format(
+                retries, sleep_time
+            )
         )
 
         time.sleep(sleep_time)
 
         # We will not run a continuation query.
         # If you uploaded more than 999 files with the same name, screw you!
-        results = client.service.runNamedQuery(
-            projectname, modulename, objecttypename, queryname, filters, start,
-            maximumresultcount
-        )
+        try:
+            results = client.service.runNamedQuery(
+                projectname, modulename, objecttypename, queryname, filters, start,
+                maximumresultcount
+            )
+            sequential_soap_err_ct = 0
+        except suds.WebFault as e:
+            # Wait and try again in case of an exception
+            logging.warn(
+                "Error occurred while checking upload "
+                "status. SOAP failure #{}".format(sequential_soap_err_ct),
+                exc_info=e)
+
+            sequential_soap_err_ct = sequential_soap_err_ct + 1
+
+            if sequential_soap_err_ct > MAX_SOAP_RETRIES:
+                raise
+
+            retries = retries + 1
+            continue
 
         # It is possible that there is more than one file with the same name.
         # And we do not have a way to reliably tell which one is ours.
@@ -527,7 +548,9 @@ def wait_for_upload(filename, site_url, username, password):
         for result in results.queryResponseHelpers[0]:
             for column in result.queryResponseColumns[0]:
                 if column.name == "Status":
-                    logging.debug("Uploaded record status: {}".format(column.value))
+                    logging.debug(
+                        "Uploaded record status: {}".format(column.value)
+                    )
                     if column.value in processing_status:
                         found_processing = True
                     last_status = column.value
