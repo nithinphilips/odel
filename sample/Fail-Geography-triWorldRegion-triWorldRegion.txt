@@ -1,0 +1,3 @@
+Parent	triIdTX	triNameTX	triGisLinkNameTX	
+\Geography		North America			
+\Geography		Nithinopia								
