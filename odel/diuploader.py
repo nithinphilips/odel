@@ -555,15 +555,15 @@ def wait_for_upload(filename, site_url, username, password):
                 max_record_id = max(record_ids)
 
                 logging.debug(
-                    "Looking for record with ID {}".format(max_record_id)
+                    "The highest record ID in this set is {}".format(max_record_id)
                 )
 
                 if di_record["Status"] in processing_status \
                  and di_record["recordId"] == max_record_id:
                     upload_id = di_record["recordId"]
                     logging.info(
-                        "The ID of the uploaded record was "
-                        "determined to be {}".format(upload_id)
+                        "The ID of the uploaded record is "
+                        "most likely {}".format(upload_id)
                     )
                 else:
                     logging.debug(
