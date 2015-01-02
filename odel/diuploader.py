@@ -99,7 +99,6 @@ def parse_filename(filename, separator='-'):
     ... )
     ['triPeople', 'triPeople', 'triEmployee']
 
-
     This method handles a special case. If the file does not have a three
     part identifier, but contains the work PatchHelper, it will return the
     info for the TRIRIGA Patch Helper module:
@@ -109,6 +108,11 @@ def parse_filename(filename, separator='-'):
     It is not case sensitive or position dependent:
     >>> parse_filename("/home/odel/UpgradeApp_patchhelper.txt")
     ['triHelper', 'triPatchHelper', 'triPatchHelper']
+
+    Underscores in the file name will be interpreted as spaces. This will be
+    useful calling Odel from Makefiles
+    >>> parse_filename("Data_Utilities-triEventDTO-triEventDTO")
+    ['Data Utilities', 'triEventDTO', 'triEventDTO']
 
     If the file name does not have three parts a ValueError is raised:
     >>> parse_filename("/home/odel/badname.xlsx")
@@ -122,6 +126,7 @@ def parse_filename(filename, separator='-'):
     results = basename.split(separator)[-3:]
     if len(results) == 3:
         results = map(str.strip, results)
+        results = map(lambda x: str.replace(x, "_", " "), results)
         return results
 
     logging.debug("No type information in the file name")
