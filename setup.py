@@ -5,7 +5,7 @@
 
 
 import re
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 version = re.search(
@@ -21,7 +21,7 @@ with open("README.rst", "rb") as f:
 
 setup(
     name = "cmdline-odel",
-    packages = ["odel"],
+    packages = find_packages(exclude=['contrib', 'docs', 'tests*']),
     entry_points = {
         "console_scripts": ['odel = odel.odel:main']
         },
@@ -30,7 +30,7 @@ setup(
         "argcomplete",
         "bunch",
         "suds",
-        "requests"
+        "requests",
     ],
     version = version,
     description = "Odel uploads Data Integrator files to Tririga",
@@ -38,4 +38,5 @@ setup(
     author = "Nithin Philips",
     author_email = "nithin@nithinphilips.com",
     url = "",
+    test_suite="odel.tests",
     )
