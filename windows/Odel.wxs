@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
-    <Product Name='Odel $(var.VERSION)' Id='6459a903-7cf6-452d-b7c8-3a84c12f0e0f' UpgradeCode='e146fcc6-847d-42a6-8117-d2bcdfd8304b'
+    <Product Name='Odel $(var.VERSION)' Id='32d115a7-3757-4cb8-b08a-530028abb1fb' UpgradeCode='e146fcc6-847d-42a6-8117-d2bcdfd8304b'
         Language='1033' Codepage='1252' Version='1.0.0' Manufacturer='Odel'>
 
         <Package Id='*' Keywords='Installer'
@@ -31,25 +31,7 @@
             <Directory Id='ProgramFilesFolder' Name='PFiles'>
                 <Directory Id='APPLICATIONFOLDER' Name='Odel'>
                     <Component Id='MainExecutable' Guid='77de8675-e836-4158-b672-435bc7bd58c6'>
-                        <File Id='odel.exe' Name='odel.exe' DiskId='1' Source='../dist/odel-runner/odel-runner.exe' KeyPath='yes' />
-                        <File Id='odel.exe.manifest' Name='odel.exe.manifest' DiskId='1' Source='../dist/odel-runner/odel-runner.exe.manifest'/>
-                        <File Id='_ctypes.pyd' DiskId='1' Source='../dist/odel-runner/_ctypes.pyd'/>
-                        <File Id='_hashlib.pyd' DiskId='1' Source='../dist/odel-runner/_hashlib.pyd'/>
-                        <File Id='_socket.pyd' DiskId='1' Source='../dist/odel-runner/_socket.pyd'/>
-                        <File Id='_ssl.pyd' DiskId='1' Source='../dist/odel-runner/_ssl.pyd'/>
-                        <File Id='bz2.pyd' DiskId='1' Source='../dist/odel-runner/bz2.pyd'/>
-                        <File Id='Microsoft.VC90.CRT.manifest' DiskId='1' Source='../dist/odel-runner/Microsoft.VC90.CRT.manifest'/>
-                        <File Id='msvcm90.dll' DiskId='1' Source='../dist/odel-runner/msvcm90.dll'/>
-                        <File Id='msvcp90.dll' DiskId='1' Source='../dist/odel-runner/msvcp90.dll'/>
-                        <File Id='msvcr90.dll' DiskId='1' Source='../dist/odel-runner/msvcr90.dll'/>
-                        <File Id='pyexpat.pyd' DiskId='1' Source='../dist/odel-runner/pyexpat.pyd'/>
-                        <File Id='python27.dll' DiskId='1' Source='../dist/odel-runner/python27.dll'/>
-                        <File Id='pywintypes27.dll' DiskId='1' Source='../dist/odel-runner/pywintypes27.dll'/>
-                        <File Id='select.pyd' DiskId='1' Source='../dist/odel-runner/select.pyd'/>
-                        <File Id='unicodedata.pyd' DiskId='1' Source='../dist/odel-runner/unicodedata.pyd'/>
-                        <File Id='win32api.pyd' DiskId='1' Source='../dist/odel-runner/win32api.pyd'/>
-                        <File Id='win32pipe.pyd' DiskId='1' Source='../dist/odel-runner/win32pipe.pyd'/>
-                        <File Id='win34wnet.pyd' DiskId='1' Source='../dist/odel-runner/win32wnet.pyd'/>
+                        <File Id='odel.exe' Name='odel.exe' DiskId='1' Source='../dist/odel-runner.exe' KeyPath='yes' />
                     </Component>
 
                     <Component Id="UpdatePathUser"

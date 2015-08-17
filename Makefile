@@ -1,4 +1,4 @@
-WINPYTHON=C:/Python27/python.exe
+WINPYTHON=C:/python27/Scripts/pyinstaller.exe
 
 winexe:
-	$(WINPYTHON) C:/Python27/pyinstaller-2.0/pyinstaller.py -y odel-runner.py
+	$(WINPYTHON) -y --onefile odel-runner.py
