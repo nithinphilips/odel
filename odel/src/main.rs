@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
 fn build_cli() -> App<'static, 'static> {
     clap_app!(odel =>
         (name: "odel")
-        (version: "0.1.0")
+        (version: "1.0.0")
         (author: "Nithin Philips <nithin@nithinphilips.com>")
         (about: "Uploads data integrator files to IBM TRIRIGA.")
 
