@@ -1,32 +1,43 @@
 Odel
 ====
-Odel uploads Data Integrator files to Tririga from the command-line. You can
-import the files quickly and easily with Odel. It can also be called from
-script as part of a batch process.
+Odel is a tool to automate TRIRIGA Data Upload using the Data Integrator tool.
 
+Features
+--------
+* Detects object info from filename.
+* Blocks until the uploaded file is completely processed.
+* Automatically selects upload action.
 
 Getting Started
 ---------------
-Windows Users
-~~~~~~~~~~~~~
-An installer is available for Windows. Download it from the `Releases
-<https://github.com/nithinphilips/odel/releases>`_ section.  Once installed,
-you will have the ``odel`` command available in your Command Prompt.
+Binaries are available for Windows and Linux.  Download it from the `Releases
+<https://github.com/nithinphilips/odel/releases>`_ section.
 
-All Other Platforms
-~~~~~~~~~~~~~~~~~~~
-Install Python 2.7. Download the source and install Odel and its
-dependencies::
+Download the zip file, extract it and add the directory containing ``odel.exe``
+to ``PATH``.
 
-    python setup.py install
+Shell auto-completion scrips are included for various shells. To install them:
+
+Bash::
+
+    cp completion/bash /etc/bash_completion.d/
+
+PowerShell::
+
+    Copy-Item completion\powershell $env:USERPROFILE\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1
+
+Note: If you have existing startup commands, manually add the completion script
+to the end, omitting the ``using namespace`` lines.
+
 
 Basic Usage
-~~~~~~~~~~~
-Once installed, odel can be invoked using the ``odel`` command::
+-----------
+Once added to ``PATH``, odel can be invoked using the ``odel`` command::
 
     odel --help
 
-We will be working with a file called ``users.txt`` (the fields are TAB delimited)::
+We will be working with a file called ``users.txt`` (the fields are TAB
+delimited)::
 
     $ cat users.txt
     triFirstNameTX  triLastNameTX   triUserNameTX
@@ -37,30 +48,22 @@ To upload ``users.txt`` to Tririga running on ``localhost``, you can run::
 
     odel --username=system --password=admin --module=triPeople \
          --businessobject=triPeople --form=triEmployee \
-         http://localhost:9080/ users.txt
+         --url=http://localhost:9080/ users.txt
 
-You can save some typing if you name you DI files to include the module,
+You can save some typing if you name the DI files to include the module,
 business object and form names. For example, if you rename ``users.txt``
 to ``triPeople-triPeople-triEmployee.txt``, you can run::
 
     odel --username=system --password=admin \
-         http://localhost:9080/ triPeople-triPeople-triEmployee.txt
+         --url=http://localhost:9080/ triPeople-triPeople-triEmployee.txt
 
 Odel will parse the file name to get the type information. See `File Naming
 Conventions`_ below for more details.
 
-The url portion may be shortened to just the server name::
-
-    odel --username=system --password=admin \
-         localhost:9080 triPeople-triPeople-triEmployee.txt
-
-The port can be removed as well. 9080 will be used as the deafult. See `URL
-Naming Conventions`_ below for more.
-
 The username and password default to ``system`` and ``admin``, so those can
 also be omitted (also now is a good time to change that password!)::
 
-    odel localhost triPeople-triPeople-triEmployee.txt
+    odel --url=http://localhost:9080 triPeople-triPeople-triEmployee.txt
 
 Note that TRIRIGA processes uploads one at a time. So, if another user uploads
 a file around the same time as you, your upload may appear to hang.
@@ -76,6 +79,8 @@ Odel parses the file name like this:
 1) Split the filename into parts, where each part is separated by a "-"
 2) Take the last three parts, assume they are Module, Business Object and Form
    names, in that order.
+2) If there are exactly two parts, they are treated as Module and Business Object.
+   The default Form for the Business Object is selected.
 
 So, you can have additional information in the file name, as long as the information
 Odel is looking for is at the very end.
@@ -107,24 +112,10 @@ to fit the limits.
 
 URL Naming Conventions
 ----------------------
-Odel is fairly flexible in handling URL values. Here's what you can enter:
-
 Scheme, host and port:
  ``http://tririga.example.com:9080/``
-Host and port:
- ``tririga.example.com:9080``. This resolves to
- ``http://tririga.example.com:9080/``
-Host only:
- ``tririga.example.com``. This resolves to 
- ``http://tririga.example.com:9080/``.
-
-Odel uses port 9080 as the default. This is the default WebSphere application
-virtual host port.
-
-There are two special cases. If you enter ``tririga.example.com:443``, it
-resolves to ``https://tririga.example.com/``. Note the HTTPS scheme. If you
-enter ``tririga.example.com:80``, Odel resolves this to
-``http://tririga.example.com/``. This is plain HTTP and the port is omitted.
+Scheme, host, port and context path:
+ ``http://tririga.example.com:9080/tririga``
 
 Waiting for Processing
 ----------------------
@@ -133,29 +124,35 @@ By default Odel will wait until Tririga changes the data upload status to
 process.
 
 This only waits for creation of records. Tririga may still continue to process
-*Associate* and other asynchronous tasks in the background.
+*Associate* and other asynchronous tasks in the background (such as with patch
+helpers.)
 
 To disable this and quit as soon as the upload is complete, specify the
-``-no-wait``` flag.
+``--no-wait``` flag.
 
-Building Windows Installer
---------------------------
-Windows installer can be built on Windows machines. You will need Python 2.7 (Windows version)
-and the ``pyinstaller`` package (version 2.0).
+Building
+--------
+1. Install RustUp: https://www.rust-lang.org/tools/install or update to latest
+   toolchain::
 
+        rustup update
+        rustup component add rustfmt
+        rustup component add clippy
 
-1. From the project root run::
+2. Use ``make`` to build::
 
-    make
+        make all
 
-   This will build the binaries.
+To build releases::
 
-2. Change directory to the ``windows`` folder and run make again::
+    make dist
 
-    cd windows/
-    make
+By default, the binary will be dynamically linked to C Runtime. To enable
+static linkage, add to ``~/.cargo/config``::
 
-   This will build the ``.msi`` installer.
+    [target.x86_64-pc-windows-msvc]
+    rustflags = ["-Ctarget-feature=+crt-static"]
+
 
 License
 -------

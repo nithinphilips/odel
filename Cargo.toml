@@ -1,0 +1,11 @@
+[workspace]
+
+members = [
+    "odel",
+]
+
+[profile.release]
+opt-level = 3
+debug = false
+lto = true
+panic = "abort"
