@@ -8,9 +8,11 @@ COLOR ?= always # Valid COLOR options: {always, auto, never}
 ifeq ($(OS),Windows_NT)
 # For Cygwin/MsysGit Windows Compatibility.
 	CARGO=HOME=$(USERPROFILE) cargo --color $(COLOR)
+	BIN_SUFFIX=.exe
 else
 # For Linux/OSX
-	cargo --color $(COLOR)
+	CARGO=cargo --color $(COLOR)
+	BIN_SUFFIX=
 endif
 
 GIT_BIN=git
@@ -67,11 +69,11 @@ expand: ## Expands all macros in the source files and prints to STDOUT
 
 completion: release
 	mkdir -p target/release/completion
-	./target/release/$(PROJECT).exe --shell-completion zsh > target/release/completion/zsh
-	./target/release/$(PROJECT).exe --shell-completion bash > target/release/completion/bash
-	./target/release/$(PROJECT).exe --shell-completion fish > target/release/completion/fish
-	./target/release/$(PROJECT).exe --shell-completion powershell >target/release/completion/powershell
-	./target/release/$(PROJECT).exe --shell-completion elvish > target/release/completion/elvish
+	./target/release/$(PROJECT)$(BIN_SUFFIX) --shell-completion zsh > target/release/completion/zsh
+	./target/release/$(PROJECT)$(BIN_SUFFIX) --shell-completion bash > target/release/completion/bash
+	./target/release/$(PROJECT)$(BIN_SUFFIX) --shell-completion fish > target/release/completion/fish
+	./target/release/$(PROJECT)$(BIN_SUFFIX) --shell-completion powershell >target/release/completion/powershell
+	./target/release/$(PROJECT)$(BIN_SUFFIX) --shell-completion elvish > target/release/completion/elvish
 
 distclean: clean ## Cleans all generated files, including distribution files
 	rm -rf $(DISTROOT)
@@ -79,7 +81,7 @@ distclean: clean ## Cleans all generated files, including distribution files
 dist: release completion ## Create a distribution package
 	rm -rf $(DISTROOT)/$(DISTDIR)
 	mkdir -p $(DISTROOT)/$(DISTDIR)
-	cp target/release/$(PROJECT).exe $(DISTROOT)/$(DISTDIR)
+	cp target/release/$(PROJECT)$(BIN_SUFFIX) $(DISTROOT)/$(DISTDIR)
 	-cp *.docx $(DISTROOT)/$(DISTDIR)
 	cp -r target/release/completion $(DISTROOT)/$(DISTDIR)
 	cd $(DISTROOT) && zip -r $(DISTZIP) $(PROJECT)-$(VERSION)/

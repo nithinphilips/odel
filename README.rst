@@ -128,7 +128,7 @@ This only waits for creation of records. Tririga may still continue to process
 helpers.)
 
 To disable this and quit as soon as the upload is complete, specify the
-``--no-wait``` flag.
+``--no-wait`` flag.
 
 Building
 --------
@@ -138,6 +138,10 @@ Building
         rustup update
         rustup component add rustfmt
         rustup component add clippy
+
+   On Ubuntu, install these packages::
+
+        apt install build-essential pkg-config libssl-dev zip
 
 2. Use ``make`` to build::
 
