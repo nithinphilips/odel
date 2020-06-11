@@ -23,6 +23,7 @@ use std::time::Duration;
 use tririga::ResponseHelperExt;
 use tririga::transport::HttpTransport;
 use tririga::tririga::RunNamedQuery;
+use std::borrow::Borrow;
 
 const FILE_NAME_MAX_LEN: usize = 50;
 const TRIRIGA_AUTH_OBJECTID: &str = "1000";
@@ -39,11 +40,21 @@ async fn main() -> Result<()> {
 }
 
 fn build_cli() -> App<'static, 'static> {
+    let version_post: &'static str = concat!(
+    "v", crate_version!(), " ", env!("VERGEN_TARGET_TRIPLE"), "\n",
+    "Copyright (C) 2020 ", crate_authors!(), "\n",
+    "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.", "\n",
+    "This is free software: you are free to change and redistribute it.", "\n",
+    "There is NO WARRANTY, to the extent permitted by law.", "\n\n",
+    "Built on ", env!("VERGEN_BUILD_DATE"), " from ", env!("VERGEN_SHA"), "\n",
+    "https://github.com/nithinphilips/odel"
+    );
+
     clap_app!(odel =>
         (name: "odel")
-        (version: "1.0.0")
-        (author: "Nithin Philips <nithin@nithinphilips.com>")
-        (about: "Uploads data integrator files to IBM TRIRIGA.")
+        (version: crate_version!())
+        (author: crate_authors!())
+        (about: crate_description!())
 
         (@arg verbose: -v --verbose ...
         "Print information verbosely. Define multiple times to get more verbose. \
@@ -117,7 +128,9 @@ EXIT CODES:
     1 if the upload failed or if the maximum wait time had elapsed.
 
     If the --no-wait flag is specified, the exit code 0 only indicates that the file
-    has been sent to TRIRIGA. It may still fail to process in TRIRIGA."))
+    has been sent to TRIRIGA. It may still fail to process in TRIRIGA.")
+    )
+    .long_version(version_post)
     .setting(AppSettings::ColoredHelp)
     .setting(AppSettings::ColorAlways)
 }

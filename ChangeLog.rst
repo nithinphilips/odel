@@ -2,6 +2,6 @@ Change Log
 ==========
 Odel Change Log
 
-Version 0.1
+Version 1.0.0
 -------------
-* First release
+* Rewritten in Rust with same functionality as the old Python version.

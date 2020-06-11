@@ -6,7 +6,8 @@ edition = "2018"
 license = "GPLv3"
 readme = "README.rst"
 publish = false
-
+build = "build.rs"
+description = "Uploads data integrator files to IBM TRIRIGA."
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -43,3 +44,6 @@ buf-read-ext = "0.3.0"
 
 [dev-dependencies]
 maplit = "1.0.1"
+
+[build-dependencies]
+vergen = "3"

@@ -15,14 +15,17 @@ else
 	BIN_SUFFIX=
 endif
 
+
+TARGET=$(shell RUSTC_BOOTSTRAP=1 rustc -Z unstable-options --print target-spec-json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["llvm-target"])')
 GIT_BIN=git
+
 
 PROJECT =  $(shell grep '^name' odel/Cargo.toml | grep -Po '(?<=")[^"]+(?=")')
 VERSION = $(shell grep '^version' odel/Cargo.toml | grep -Po '(?<=")[^"]+(?=")')
 
 DISTROOT=./dist
-DISTDIR = $(PROJECT)-$(VERSION)
-DISTZIP=$(PROJECT)-$(VERSION)-bin.zip
+DISTDIR = $(PROJECT)-$(VERSION)-$(TARGET)
+DISTZIP=$(PROJECT)-$(VERSION)-$(TARGET)-bin.zip
 SRCDISTZIP=$(PROJECT)-$(VERSION)-src.zip
 
 .PHONY: all bench build release check clean doc install publish run test update
@@ -82,9 +85,10 @@ dist: release completion ## Create a distribution package
 	rm -rf $(DISTROOT)/$(DISTDIR)
 	mkdir -p $(DISTROOT)/$(DISTDIR)
 	cp target/release/$(PROJECT)$(BIN_SUFFIX) $(DISTROOT)/$(DISTDIR)
-	-cp *.docx $(DISTROOT)/$(DISTDIR)
+	-cp README.rst $(DISTROOT)/$(DISTDIR)
+	-cp ChangeLog.rst $(DISTROOT)/$(DISTDIR)
 	cp -r target/release/completion $(DISTROOT)/$(DISTDIR)
-	cd $(DISTROOT) && zip -r $(DISTZIP) $(PROJECT)-$(VERSION)/
+	cd $(DISTROOT) && zip -r $(DISTZIP) $(DISTDIR)/
 	rm -rf $(DISTROOT)/$(DISTDIR)
 
 distsrc: ## Creates a zip file with source code
