@@ -1,9 +1,15 @@
+//! # Odel
+//!
+//! Odel is a tool to upload Data Integrator files to IBM TRIRIGA.
+//!
+
 #![recursion_limit = "1024"]
 
 mod errors;
 mod soap;
 mod tririga;
 mod utils;
+
 
 #[allow(unused_imports)]
 #[macro_use] extern crate log;
@@ -24,6 +30,7 @@ use tririga::ResponseHelperExt;
 use tririga::transport::HttpTransport;
 use tririga::tririga::RunNamedQuery;
 use std::borrow::Borrow;
+use crate::tririga::TririgaEnvironment;
 
 const FILE_NAME_MAX_LEN: usize = 50;
 const TRIRIGA_AUTH_OBJECTID: &str = "1000";
@@ -40,16 +47,6 @@ async fn main() -> Result<()> {
 }
 
 fn build_cli() -> App<'static, 'static> {
-    let version_post: &'static str = concat!(
-    "v", crate_version!(), " ", env!("VERGEN_TARGET_TRIPLE"), "\n",
-    "Copyright (C) 2020 ", crate_authors!(), "\n",
-    "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.", "\n",
-    "This is free software: you are free to change and redistribute it.", "\n",
-    "There is NO WARRANTY, to the extent permitted by law.", "\n\n",
-    "Built on ", env!("VERGEN_BUILD_DATE"), " from ", env!("VERGEN_SHA"), "\n",
-    "https://github.com/nithinphilips/odel"
-    );
-
     clap_app!(odel =>
         (name: "odel")
         (version: crate_version!())
@@ -71,10 +68,10 @@ fn build_cli() -> App<'static, 'static> {
         (@arg url: +takes_value -l --("url") "TRIRIGA URL. Default: http://localhost:9080 ")
 
         (@arg max_retries: +takes_value -r --("max-retries") "The maximum number of times to check \
-        for file processing completion. Default 23. See BACKOFF below.")
+        for file processing completion. Default 23. See WAIT below.")
 
-        (@arg no_wait: -w --("no-wait") "Do not Wait until the file is processed by Tririga. \
-        By default Odel will wait until Tririga has fully processed the file.")
+        (@arg no_wait: -w --("no-wait") "Do not Wait until the file is processed by TRIRIGA. \
+        See WAIT below")
 
         (@arg module: +takes_value -m --("module") "The name of the record's module you are \
         uploading")
@@ -92,6 +89,10 @@ fn build_cli() -> App<'static, 'static> {
     The DATAFILE must be in tab-delimited format. Odel does not verify the file format. If the
     the file format is not correct the uploaded file may fail to import in TRIRIGA.
 
+SUPPORTED PLATFORM:
+    Any recent TRIRIGA platform version is supported. We have tested with 3.6.1.
+    The TRIRIGA instance must have a Connector for Business Applications license.
+
 FILENAME:
     The module, businessobject and form options are optional if the file is named in one of
     these patterns
@@ -101,6 +102,7 @@ FILENAME:
     * <module>-<businessObject>.txt
 
     Otherwise, you must specify them using the --module, --businessobject and --form options.
+    If the file name pattern is recognized, it takes precedence over the command-line options.
 
 ACTION:
     The --action option is optional. If omitted the available actions are retrieved from TRIRIGA
@@ -109,12 +111,24 @@ ACTION:
     If you specify an invalid action, Odel will warn you, but will upload anyways. This could
     lead to the creation of invalid records in the TRIRIGA.
 
-BACKOFF:
-    The upload processing status check is done in an exponentially slowing interval.
-    This prevents Odel from making too many requests to TRIRIGA when uploading large
-    files while also quickly getting the status for small files. This can be configured
-    using the --max-retries option. The default value is 23 (requests). In terms of time,
-    Odel will wait about 24 hours before giving up.
+WAIT:
+    By default Odel will wait until Data Integrator has completed processing the file. This means
+    that the records you uploaded are created in the system. This does NOT mean that any
+    asynchronous processing workflows that the record creation may trigger have finished.
+
+    This capability can be used to upload related records in a batch (such as Building and child
+    Spaces.) You can be sure that subsequent files are not uploaded until the preceding records
+    are created in the system. The EXIT CODE set by Odel can be used to stop the processing if any
+    file in the chain fails.
+
+    You can disable waiting by setting the --no-wait flag.
+
+    The upload processing status check is done by polling the status of matching Data Upload
+    records. This is done in exponentially slowing interval. This prevents Odel from making too
+    many requests to TRIRIGA when uploading large files while also quickly getting the status
+    for small files. This can be configured using the --max-retries option. The default value is
+    23 (requests). In terms of time, --max-retires=23 will cause Odel to wait about 24 hours before
+    giving up.
 
     If the retry time has elapsed and the file still has not been processed, Odel will exit
     with an error.
@@ -129,8 +143,16 @@ EXIT CODES:
 
     If the --no-wait flag is specified, the exit code 0 only indicates that the file
     has been sent to TRIRIGA. It may still fail to process in TRIRIGA.")
+    (long_version: concat!(
+        "v", crate_version!(), " ", env!("VERGEN_TARGET_TRIPLE"), "\n",
+        "Copyright (C) 2020 ", crate_authors!(), "\n",
+        "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.", "\n",
+        "This is free software: you are free to change and redistribute it.", "\n",
+        "There is NO WARRANTY, to the extent permitted by law.", "\n\n",
+        "Built on ", env!("VERGEN_BUILD_DATE"), " from ", env!("VERGEN_SHA"), "\n",
+        "https://github.com/nithinphilips/odel"
+     ))
     )
-    .long_version(version_post)
     .setting(AppSettings::ColoredHelp)
     .setting(AppSettings::ColorAlways)
 }
@@ -163,12 +185,57 @@ async fn run() -> Result<()> {
         .module(module_path!())
         .quiet(quiet)
         .verbosity(verbose)
-        .timestamp(stderrlog::Timestamp::Second)
+        // .timestamp(stderrlog::Timestamp::Second)
         .init()?;
 
-    let url = normalize_url(matches.value_of("url").unwrap_or_else(|| "http://localhost:9080"));
-    let username = matches.value_of("username").unwrap_or_else(|| "system");
-    let password = matches.value_of("password").unwrap_or_else(|| "admin");
+
+    let env = if Path::new(tririga::TRIRIGA_JSON_FILENAME).exists() {
+        let mut tririga_json_f = File::open(tririga::TRIRIGA_JSON_FILENAME)?;
+        let env: serde_json::Result<TririgaEnvironment> = serde_json::from_reader(tririga_json_f);
+        match env {
+            Ok(env) => {
+                info!("{} file found in current directory. it will be used for host information \
+                if CLI options are missing.", tririga::TRIRIGA_JSON_FILENAME);
+                // trace!("{:?}", env); // Could leak credentials to log
+                env
+            }
+            Err(e) => {
+                warn!("{} file was found but could not be parsed. {}",
+                      tririga::TRIRIGA_JSON_FILENAME, e);
+                TririgaEnvironment::default()
+            }
+        }
+    } else {
+        info!("{} file not found in current directory.", tririga::TRIRIGA_JSON_FILENAME);
+        TririgaEnvironment::default()
+    };
+
+    let url = match matches.value_of("url") {
+        Some(s) => String::from(normalize_url(s)),
+        None => {
+            let t_url = env.web_host.ok_or(anyhow!("No webURL value set in {}",
+            tririga::TRIRIGA_JSON_FILENAME))?;
+            String::from(normalize_url(t_url.as_str()))
+        }
+    };
+
+    let username = match matches.value_of("username") {
+        Some(s) => String::from(s),
+        None => env.web_username.ok_or(anyhow!("No webUsername value set in {}",
+        tririga::TRIRIGA_JSON_FILENAME))?
+    };
+
+    let password = match matches.value_of("password") {
+        Some(s) => String::from(s),
+        None => env.web_password.ok_or(anyhow!("No webPassword value set in {}",
+        tririga::TRIRIGA_JSON_FILENAME))?
+    };
+
+    info!("Connecting to {} as {}", url, username);
+
+    // let url = normalize_url(matches.value_of("url").unwrap_or(&url_tj));
+    // let username = matches.value_of("username").unwrap_or_else(|| "system");
+    // let password = matches.value_of("password").unwrap_or_else(|| "admin");
 
     let data_file = matches.value_of("DATAFILE").ok_or_else(|| anyhow!("Datafile is required"))?;
 

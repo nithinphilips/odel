@@ -1,8 +1,6 @@
 
 pub mod auth;
-pub mod client;
 mod validate;
-//mod common;
 mod soap_envelope;
 
 const SOAP_URI: &str = "http://www.w3.org/2003/05/soap-envelope";
