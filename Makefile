@@ -1,23 +1,31 @@
-# CargoMake by NeoSmart Technologies
-# Written and maintained by Mahmoud Al-Qudsi <mqudsi@neosmart.net>
-# Released under the MIT public license
-# Obtain updates from https://github.com/neosmart/CargoMake
+# Based on CargoMake from https://github.com/neosmart/CargoMake
 
 COLOR ?= always # Valid COLOR options: {always, auto, never}
+RUSTC ?= rustc
+# We don't use the command variables because they may contain args.
+# The could be overridden
+REQ_TOOLS ?= rustc cargo git python3 zip balls
 
 ifeq ($(OS),Windows_NT)
-# For Cygwin/MsysGit Windows Compatibility.
-	CARGO=HOME=$(USERPROFILE) cargo --color $(COLOR)
-	BIN_SUFFIX=.exe
+	# For Cygwin/MsysGit Windows Compatibility.
+	CARGO?=HOME=$(USERPROFILE) cargo --color $(COLOR)
+	BIN_SUFFIX?=.exe
 else
-# For Linux/OSX
-	CARGO=cargo --color $(COLOR)
-	BIN_SUFFIX=
+	# For Linux/OSX
+	CARGO?=cargo --color $(COLOR)
+	BIN_SUFFIX?=
+endif
+
+ifndef SKIP_TOOL_CHECK
+	# Check for required tools.
+	# https://stackoverflow.com/a/25668869/260740
+	K := $(foreach exec,$(REQ_TOOLS),\
+			$(if $(shell which $(exec) 2> /dev/null),some string,$(error "Required tool '$(exec)' was not found in PATH. Install it or set `SKIP_TOOL_CHECK=1` to force.")))
 endif
 
 
-TARGET=$(shell RUSTC_BOOTSTRAP=1 rustc -Z unstable-options --print target-spec-json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["llvm-target"])')
-GIT_BIN=git
+TARGET=$(shell RUSTC_BOOTSTRAP=1 $(RUSTC) -Z unstable-options --print target-spec-json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["llvm-target"])')
+GIT_BIN?=git
 
 
 PROJECT =  $(shell grep '^name' odel/Cargo.toml | grep -Po '(?<=")[^"]+(?=")')
@@ -70,7 +78,7 @@ update: ## Updates dependencies in the Cargo.lock file to the latest version.
 expand: ## Expands all macros in the source files and prints to STDOUT
 	@$(CARGO) expand --color=always --theme=1337
 
-completion: release
+completion: release ## Generates autocompletion scripts
 	mkdir -p target/release/completion
 	./target/release/$(PROJECT)$(BIN_SUFFIX) --shell-completion zsh > target/release/completion/zsh
 	./target/release/$(PROJECT)$(BIN_SUFFIX) --shell-completion bash > target/release/completion/bash
