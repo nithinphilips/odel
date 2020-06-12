@@ -7,6 +7,7 @@ Features
 * Detects object info from filename.
 * Blocks until the uploaded file is completely processed.
 * Automatically selects upload action.
+* Upload hierachical files to multiple business objects in a batch.
 
 Getting Started
 ---------------
@@ -16,18 +17,23 @@ Binaries are available for Windows and Linux.  Download it from the `Releases
 Download the zip file, extract it and add the directory containing ``odel.exe``
 to ``PATH``.
 
-Shell auto-completion scrips are included for various shells. To install them:
+Shell auto-completion scripts are included for various shells. To install them:
 
-Bash::
+Bash:
+ .. code:: bash
 
-    cp completion/bash /etc/bash_completion.d/
+    cp completion/bash /etc/bash_completion.d/odel
+    chmod ugo+x /etc/bash_completion.d/odel
+    source ~/.bashrc
 
-PowerShell::
+PowerShell:
+ .. code:: powershell
 
     Copy-Item completion\powershell $env:USERPROFILE\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1
 
-Note: If you have existing startup commands, manually add the completion script
-to the end, omitting the ``using namespace`` lines.
+Note: If you have existing startup commands in
+``Microsoft.PowerShell_profile.ps1``, do not copy. Instead manually add the
+completion script to the end, omitting the ``using namespace`` lines.
 
 
 Basic Usage
@@ -65,6 +71,25 @@ also be omitted (also now is a good time to change that password!)::
 
     odel --url=http://localhost:9080 triPeople-triPeople-triEmployee.txt
 
+You can optionally put the connection information in a JSON file named
+``tririga.json`` in the current directory.
+
+The file should look like this:
+
+.. code:: json
+
+    {
+        "name" : "Example-dev",
+        "webHost" : "http://10.10.0.100:9080/",
+        "webUsername" : "system",
+        "webPassword" : "admin"
+    }
+
+If you have a ``tririga.json`` file and you set the commandline connection
+options, the values set in commandline take precedence. You can also override
+individual settings in the ``tririga.json`` file by setting the matching
+commandline options.
+
 Note that TRIRIGA processes uploads one at a time. So, if another user uploads
 a file around the same time as you, your upload may appear to hang.
 
@@ -79,7 +104,7 @@ Odel parses the file name like this:
 1) Split the filename into parts, where each part is separated by a "-"
 2) Take the last three parts, assume they are Module, Business Object and Form
    names, in that order.
-2) If there are exactly two parts, they are treated as Module and Business Object.
+3) If there are exactly two parts, they are treated as Module and Business Object.
    The default Form for the Business Object is selected.
 
 So, you can have additional information in the file name, as long as the information
@@ -96,6 +121,9 @@ With a prefix:
  ``IterationA - triPeople-triPeople-triEmployee.txt``
 With two prefixes:
  ``001 - IterationA - triPeople-triPeople-triEmployee.txt``
+Module and Business Object Only (no prefixes are allowed):
+ ``triPeople-triPeople.txt``
+
 
 If the regular parsing of three part file name fails, Odel will try a keyword
 search to guess the type of the file. Only a single keyword is currently

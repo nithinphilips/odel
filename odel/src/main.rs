@@ -65,7 +65,9 @@ fn build_cli() -> App<'static, 'static> {
 
         (@arg username: +takes_value -u --("username") "TRIRIGA Username. Default: system")
         (@arg password: +takes_value -p --("password") "TRIRIGA Password. Default: admin")
-        (@arg url: +takes_value -l --("url") "TRIRIGA URL. Default: http://localhost:9080 ")
+        (@arg url: +takes_value -l --("url") "TRIRIGA URL. Default: http://localhost:9080")
+        (@arg config: +takes_value -c --("config") "Path to server configuration file. Default: \
+        tririga.json. See CONFIG FILE")
 
         (@arg max_retries: +takes_value -r --("max-retries") "The maximum number of times to check \
         for file processing completion. Default 23. See WAIT below.")
@@ -85,7 +87,7 @@ fn build_cli() -> App<'static, 'static> {
         empty, data will be read from STDIN")
 
         (after_help:
-"DATAFILE:
+r#"DATAFILE:
     The DATAFILE must be in tab-delimited format. Odel does not verify the file format. If the
     the file format is not correct the uploaded file may fail to import in TRIRIGA.
 
@@ -133,6 +135,22 @@ WAIT:
     If the retry time has elapsed and the file still has not been processed, Odel will exit
     with an error.
 
+CONFIG FILE:
+    Odel can read read the url, username and password values from a JSON file. By default
+    Odel will search for a file named `tririga.json` in CWD and if found will load it. You can load
+    another file by using the --config option.
+
+    The file format should be:
+
+        {
+            "webHost" : "http://localhost:9080/",
+            "webUsername" : "system",
+            "webPassword" : "admin"
+        }
+
+    If you set the --url, --username or --password command-line options, they will always override
+    the values read from the JSON file.
+
 SSO:
     SAML SSO Authentication is not supported. You must have direct access to the TRIRIGA
     server. LDAP authentication with username and password may work, but is untested.
@@ -142,7 +160,7 @@ EXIT CODES:
     1 if the upload failed or if the maximum wait time had elapsed.
 
     If the --no-wait flag is specified, the exit code 0 only indicates that the file
-    has been sent to TRIRIGA. It may still fail to process in TRIRIGA.")
+    has been sent to TRIRIGA. It may still fail to process in TRIRIGA."#)
     (long_version: concat!(
         "v", crate_version!(), " ", env!("VERGEN_TARGET_TRIPLE"), "\n",
         "Copyright (C) 2020 ", crate_authors!(), "\n",
@@ -188,25 +206,27 @@ async fn run() -> Result<()> {
         // .timestamp(stderrlog::Timestamp::Second)
         .init()?;
 
+    let tririga_json_file_name = matches.value_of("config")
+        .unwrap_or_else(|| tririga::TRIRIGA_JSON_FILENAME);
 
-    let env = if Path::new(tririga::TRIRIGA_JSON_FILENAME).exists() {
-        let mut tririga_json_f = File::open(tririga::TRIRIGA_JSON_FILENAME)?;
+    let env = if Path::new(tririga_json_file_name).exists() {
+        let mut tririga_json_f = File::open(tririga_json_file_name)?;
         let env: serde_json::Result<TririgaEnvironment> = serde_json::from_reader(tririga_json_f);
         match env {
             Ok(env) => {
                 info!("{} file found in current directory. it will be used for host information \
-                if CLI options are missing.", tririga::TRIRIGA_JSON_FILENAME);
+                if CLI options are missing.", tririga_json_file_name);
                 // trace!("{:?}", env); // Could leak credentials to log
                 env
             }
             Err(e) => {
                 warn!("{} file was found but could not be parsed. {}",
-                      tririga::TRIRIGA_JSON_FILENAME, e);
+                      tririga_json_file_name, e);
                 TririgaEnvironment::default()
             }
         }
     } else {
-        info!("{} file not found in current directory.", tririga::TRIRIGA_JSON_FILENAME);
+        info!("{} file not found in current directory.", tririga_json_file_name);
         TririgaEnvironment::default()
     };
 
