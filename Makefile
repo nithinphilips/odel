@@ -4,7 +4,7 @@ COLOR ?= always # Valid COLOR options: {always, auto, never}
 RUSTC ?= rustc
 # We don't use the command variables because they may contain args.
 # The could be overridden
-REQ_TOOLS ?= rustc cargo git python3 zip balls
+REQ_TOOLS ?= rustc cargo git python3 zip
 
 ifeq ($(OS),Windows_NT)
 	# For Cygwin/MsysGit Windows Compatibility.
