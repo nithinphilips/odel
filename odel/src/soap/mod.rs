@@ -3,15 +3,23 @@ pub mod auth;
 mod validate;
 mod soap_envelope;
 
+use thiserror::Error;
+
 const SOAP_URI: &str = "http://www.w3.org/2003/05/soap-envelope";
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum Error {
+    #[error("parsing error")]
     ParseError,
+    #[error("soap envelope not found error")]
     EnvelopeNotFound,
+    #[error("soap body not error")]
     BodyNotFound,
+    #[error("soap body is empty error")]
     BodyIsEmpty,
+    #[error("soap fault: {0}")]
     Fault(soap_envelope::Fault),
+    #[error("internal soap processing error: {0}")]
     InternalError(String),
 }
 

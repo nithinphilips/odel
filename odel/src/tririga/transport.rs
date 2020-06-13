@@ -19,18 +19,14 @@ pub enum Error {
     HttpClient(StatusCode),
     #[error("HTTP server error: `{0}`")]
     HttpServer(StatusCode),
-}
-
-impl From<reqwest::Error> for Error {
-    fn from(e: reqwest::Error) -> Self {
-         Error::Transport(e.into())
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Self {
-        Error::Transport(e.into())
-    }
+    #[error(transparent)]
+    HttpError(#[from] reqwest::Error),
+    #[error(transparent)]
+    Utf8Error(#[from] std::str::Utf8Error),
+    #[error(transparent)]
+    SoapError(#[from] soap::Error),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
 }
 
 impl From<&str> for Error {
@@ -75,12 +71,13 @@ impl Transport for HttpTransport {
             let response_text = Vec::from(response.text().await?);
             trace!("Message: {:?}", std::str::from_utf8(&response_text).unwrap());
             return e;
-        } else if response.status().is_server_error() {
-            let e = Err(Error::HttpServer(response.status()));
-            let response_text = Vec::from(response.text().await?);
-            trace!("Message: {:?}", std::str::from_utf8(&response_text).unwrap());
-            return e;
         }
+        // else if response.status().is_server_error() {
+        //     let e = Err(Error::HttpServer(response.status()));
+        //     let response_text = Vec::from(response.text().await?);
+        //     trace!("Message: {:?}", std::str::from_utf8(&response_text).unwrap());
+        //     return e;
+        // }
 
         let mut nodes: Vec<Vec<u8>> = Vec::new();
         let headers = response.headers().clone();
@@ -89,13 +86,12 @@ impl Transport for HttpTransport {
         let mut response_text = Cursor::new(response_text);
         inner(&mut response_text, &headers, &mut nodes, false)?;
 
-        // Stream the body, writing each chunk to stdout as we get it
-        let first_body = nodes.first().unwrap();
-        let str = std::str::from_utf8(first_body).unwrap();
+        let first_body = nodes.first().ok_or( Error::Deserialization("Could not find multi-part content".to_string()))?;
+        let str = std::str::from_utf8(first_body)?;
         //debug!("{:?}", str);
 
 
-        let unsoap_message = soap::unsoap(&str).unwrap();
+        let unsoap_message = soap::unsoap(&str)?;
 
         Ok(unsoap_message)
     }

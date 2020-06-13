@@ -253,10 +253,6 @@ async fn run() -> Result<()> {
 
     info!("Connecting to {} as {}", url, username);
 
-    // let url = normalize_url(matches.value_of("url").unwrap_or(&url_tj));
-    // let username = matches.value_of("username").unwrap_or_else(|| "system");
-    // let password = matches.value_of("password").unwrap_or_else(|| "admin");
-
     let data_file = matches.value_of("DATAFILE").ok_or_else(|| anyhow!("Datafile is required"))?;
 
     if !Path::new(data_file).exists() {
@@ -472,13 +468,15 @@ async fn get_object_info(t: &HttpTransport, fileinfo: &FileComponents) -> Result
     let params = GetModuleId{
         module_name: Some(fileinfo.module.to_string())
     };
-    let module_id: i64 = get_module_id(t, &params).await?.out as i64;
+    let module_id: i64 = get_module_id(t, &params)
+        .await.context("Failed resolve module id")?.out as i64;
 
     let params = GetObjectTypeId {
         module_name: Some(fileinfo.module.to_string()),
         object_type_name: Some(fileinfo.business_object.to_string()),
     };
-    let object_type_id = get_object_type_id(t, &params).await?.out;
+    let object_type_id = get_object_type_id(t, &params)
+        .await.context("Failed to resolve business object id")?.out;
 
     let gui_id =
         match &fileinfo.form {
@@ -486,7 +484,8 @@ async fn get_object_info(t: &HttpTransport, fileinfo: &FileComponents) -> Result
                 let params = GetGUIs {
                     object_type_id,
                 };
-                let guis = get_guis(t, &params).await?;
+                let guis = get_guis(t, &params)
+                    .await.context("Failed to resolve form id")?;
 
                 guis.out.gui
                 .into_iter()
@@ -498,7 +497,8 @@ async fn get_object_info(t: &HttpTransport, fileinfo: &FileComponents) -> Result
                 let params = GetDefaultGuiId {
                     object_type_id,
                 };
-                let guis = get_default_gui_id(t, &params).await?;
+                let guis = get_default_gui_id(t, &params)
+                    .await.context("Failed to get default form id")?;
                 debug!("Form name is not provided. Using the default form for the business object.");
                 guis.out
             }
@@ -511,7 +511,8 @@ async fn get_object_info(t: &HttpTransport, fileinfo: &FileComponents) -> Result
         gui_id: -1
     };
 
-    let actions = get_object_type_actions(t, &params).await?;
+    let actions = get_object_type_actions(t, &params)
+        .await.context("Error getting form actions")?;
 
     let actions: Vec<String> =
         actions.out.ok_or_else(|| anyhow!("Error getting form actions"))?
