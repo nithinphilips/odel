@@ -277,8 +277,11 @@ async fn run() -> Result<()> {
     let cli_form = matches.value_of("form");
     let action = matches.value_of("action");
 
+
+    let mut futures = Vec::with_capacity(data_files.len());
+
     for data_file in data_files {
-        handle_file(
+        let fut = handle_file(
             data_file,
             cli_module,
             cli_business_object,
@@ -288,8 +291,12 @@ async fn run() -> Result<()> {
             max_retries,
             &soap_t,
             &web_t
-        ).await?;
+        );
+
+        futures.push(fut);
     }
+
+    let res = futures::future::try_join_all(futures).await?;
 
     Ok(())
 }
@@ -304,7 +311,7 @@ async fn handle_file(
     max_retries: usize,
     soap_t: &HttpTransport,
     web_t: &HttpTransport
-) -> Result<()>{
+) -> Result<()> {
 
     if !Path::new(data_file).exists() {
         bail!("The data file '{}' does not exist.", data_file);
