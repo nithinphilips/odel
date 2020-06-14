@@ -83,8 +83,8 @@ fn build_cli() -> App<'static, 'static> {
         (@arg action: +takes_value -a --("action") "The action to apply to the newly created \
         records. See ACTION below.")
 
-        (@arg DATAFILE: "Sets the data file to upload. Only Tab-delimited files are supported. If \
-        empty, data will be read from STDIN")
+        (@arg DATAFILE: ... "Sets the data file to upload. Only Tab-delimited files are supported. \
+        If empty, data will be read from STDIN")
 
         (after_help:
 r#"DATAFILE:
@@ -253,11 +253,8 @@ async fn run() -> Result<()> {
 
     info!("Connecting to {} as {}", url, username);
 
-    let data_file = matches.value_of("DATAFILE").ok_or_else(|| anyhow!("Datafile is required"))?;
+    let data_files = matches.values_of("DATAFILE").ok_or_else(|| anyhow!("Datafile is required"))?;
 
-    if !Path::new(data_file).exists() {
-        bail!("The data file '{}' does not exist.", data_file);
-    }
 
     let web_t = HttpTransport{
         client: reqwest::Client::builder().cookie_store(true).build()?,
@@ -275,32 +272,67 @@ async fn run() -> Result<()> {
         password: password.to_string()
     };
 
+    let cli_module = matches.value_of("module");
+    let cli_business_object = matches.value_of("businessobject");
+    let cli_form = matches.value_of("form");
+    let action = matches.value_of("action");
+
+    for data_file in data_files {
+        handle_file(
+            data_file,
+            cli_module,
+            cli_business_object,
+            cli_form,
+            action,
+            no_wait,
+            max_retries,
+            &soap_t,
+            &web_t
+        ).await?;
+    }
+
+    Ok(())
+}
+
+async fn handle_file(
+    data_file: &str,
+    module: Option<&str>,
+    business_object: Option<&str>,
+    form: Option<&str>,
+    action: Option<&str>,
+    no_wait: bool,
+    max_retries: usize,
+    soap_t: &HttpTransport,
+    web_t: &HttpTransport
+) -> Result<()>{
+
+    if !Path::new(data_file).exists() {
+        bail!("The data file '{}' does not exist.", data_file);
+    }
+
     let fc =
         if let Some(fcc) = parse_filename(data_file) {
             fcc
         } else {
             FileComponents {
-                module: matches
-                    .value_of("module")
+                module: module
                     .ok_or_else (|| anyhow!("The object type information could not be extracted \
                     from file name `{}`. Specify it using --module, --businessobject and  \
                     (optionally) --form.",
                     data_file))?
                     .to_string(),
-                business_object: matches
-                    .value_of("businessobject")
+                business_object: business_object
                     .ok_or_else(|| anyhow!("The object type information could not be extracted \
                     from file name `{}`. Specify it using --module, --businessobject and \
                     (optionally) --form.", data_file))?
                     .to_string(),
-                form: match matches.value_of("form") {
+                form: match form {
                     Some(s) => Some(s.to_string()),
                     None => None
                 },
             }
         };
 
-    let action = matches.value_of("action");
 
     info!("Resolving object ids for {}::{}::{:?}", fc.module, fc.business_object, fc.form);
     let oi = get_object_info(&soap_t, &fc).await?;
@@ -312,7 +344,7 @@ async fn run() -> Result<()> {
         &web_t,
         data_file,
         action,
-       &oi,
+        &oi,
     ).await?;
 
     if !no_wait {
