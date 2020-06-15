@@ -29,12 +29,11 @@ use std::time::Duration;
 use tririga::ResponseHelperExt;
 use tririga::transport::HttpTransport;
 use tririga::tririga::RunNamedQuery;
-use std::borrow::Borrow;
 use crate::tririga::TririgaEnvironment;
-use futures::TryFuture;
-use std::future::Future;
 use crate::tririga::transport::Transport;
 use crate::errors::OdelError;
+use std::error::Error;
+use itertools::Itertools;
 
 const FILE_NAME_MAX_LEN: usize = 50;
 
@@ -84,13 +83,16 @@ fn build_cli() -> App<'static, 'static> {
         (@arg action: +takes_value -a --("action") "The action to apply to the newly created \
         records. See ACTION below.")
 
-        (@arg DATAFILE: ... "Sets the data file to upload. Only Tab-delimited files are supported. \
-        If empty, data will be read from STDIN")
+        (@arg DATAFILE: ... "Sets the data file to upload. Multiple files are uploaded concurrently.")
 
         (after_help:
 r#"DATAFILE:
-    The DATAFILE must be in tab-delimited format. Odel does not verify the file format. If the
+    DATAFILEs must be in tab-delimited format. Odel does not verify the file format. If the
     the file format is not correct the uploaded file may fail to import in TRIRIGA.
+
+    If multiple files are given they are uploaded concurrently. Odel exits when all uploaded
+    file are processed. Only use this if the uploaded files do not depend upon each other.
+    If they do, execute Odel separately for each file instead.
 
 SUPPORTED PLATFORM:
     Any recent TRIRIGA platform version is supported. We have tested with 3.6.1.
@@ -211,7 +213,7 @@ async fn run() -> Result<()> {
         .unwrap_or_else(|| tririga::TRIRIGA_JSON_FILENAME);
 
     let env = if Path::new(tririga_json_file_name).exists() {
-        let mut tririga_json_f = File::open(tririga_json_file_name)?;
+        let tririga_json_f = File::open(tririga_json_file_name)?;
         let env: serde_json::Result<TririgaEnvironment> = serde_json::from_reader(tririga_json_f);
         match env {
             Ok(env) => {
@@ -254,7 +256,9 @@ async fn run() -> Result<()> {
 
     info!("Connecting to {} as {}", url, username);
 
-    let data_files = matches.values_of("DATAFILE").ok_or_else(|| anyhow!("Datafile is required"))?;
+    let data_files: Vec<&str> = matches.values_of("DATAFILE")
+        .ok_or_else(|| anyhow!("Datafile is required"))?
+        .collect();
     let data_files_ct = data_files.len();
 
     let web_t = HttpTransport{
@@ -279,9 +283,9 @@ async fn run() -> Result<()> {
     let action = matches.value_of("action");
 
     // Login once
-    info!("Create Web session");
+    info!("Creating Web session");
     web_t.login_web().await?;
-    info!("Create SOAP session");
+    info!("Creating SOAP session");
     soap_t.login_soap().await?;
 
     // We could queue all the futures and join together later so that all the files
@@ -302,14 +306,19 @@ async fn run() -> Result<()> {
     //     ).await?;
     // }
 
+    let files = parse_trim_files(
+        &data_files,
+        cli_module,
+        cli_business_object,
+        cli_form
+    )?;
+
     let results = futures::future::join_all(
-        data_files
-            .map( | data_file|
+        files
+            .iter()
+            .map( | file|
                 handle_file(
-                    data_file,
-                    cli_module,
-                    cli_business_object,
-                    cli_form,
+                    file,
                     action,
                     no_wait,
                     max_retries,
@@ -334,7 +343,10 @@ async fn run() -> Result<()> {
 
         for fail in fails {
             if let Err(e) = fail {
-                error!("{}", e)
+                error!("{:?}{}", e, match e.source(){
+                    None => "".to_string(),
+                    Some(source_e) => format!("\n\nCaused by: {}", source_e),
+                })
             }
         }
 
@@ -346,11 +358,78 @@ async fn run() -> Result<()> {
     Ok(())
 }
 
+fn get_file_trim_strategy(files: &Vec<&str>) -> fn(&str, usize) -> Option<String>
+{
+    let pre_trimmed: Vec<String> = files.iter()
+        .map(|x| {
+            let path = PathBuf::from(x);
+            let file_name_only = path
+                .file_name().unwrap()
+                .to_str().unwrap();
+            trim_filename(file_name_only, FILE_NAME_MAX_LEN).unwrap_or_else(|| "".to_string())
+            }
+        )
+        .dedup()
+        .collect();
+
+    if pre_trimmed.len() == files.len(){
+        info!("All file names are unique. Using trim_filename strategy.");
+        trim_filename
+    }else {
+        info!("Duplicate file names found in input. Using unique_filename strategy.");
+        uuid_filename
+    }
+}
+
+fn parse_trim_files(files: &Vec<&str>,
+                    module: Option<&str>,
+                    business_object: Option<&str>,
+                    form: Option<&str>) -> Result<Vec<FileComponents>>
+{
+    let mut result = Vec::with_capacity(files.len());
+
+    let file_trim_strategy = get_file_trim_strategy(&files);
+
+    for data_file in files {
+
+        let path = PathBuf::from(data_file);
+        let file_name_only = path
+            .file_name().ok_or_else(|| anyhow!("Error reading path"))?
+            .to_str().ok_or_else(|| anyhow!("Error reading path"))?;
+
+        let fc =
+            if let Some(mut fcc) = parse_filename(data_file) {
+                fcc.trimmed_filename = file_trim_strategy(file_name_only, FILE_NAME_MAX_LEN);
+                fcc
+            } else {
+                FileComponents {
+                    module: module
+                        .ok_or_else (|| anyhow!("The object type information could not be extracted \
+                    from file name `{}`. Specify it using --module, --businessobject and  \
+                    (optionally) --form.",
+                    data_file))?
+                        .to_string(),
+                    business_object: business_object
+                        .ok_or_else(|| anyhow!("The object type information could not be extracted \
+                    from file name `{}`. Specify it using --module, --businessobject and \
+                    (optionally) --form.", data_file))?
+                        .to_string(),
+                    form: match form {
+                        Some(s) => Some(s.to_string()),
+                        None => None
+                    },
+                    filename: data_file.to_string(),
+                    trimmed_filename: file_trim_strategy(file_name_only, FILE_NAME_MAX_LEN)
+                }
+            };
+        result.push(fc);
+    }
+
+    Ok(result)
+}
+
 async fn handle_file(
-    data_file: &str,
-    module: Option<&str>,
-    business_object: Option<&str>,
-    form: Option<&str>,
+    data_file: &FileComponents,
     action: Option<&str>,
     no_wait: bool,
     max_retries: usize,
@@ -358,43 +437,25 @@ async fn handle_file(
     web_t: &HttpTransport
 ) -> Result<()> {
 
-    if !Path::new(data_file).exists() {
-        bail!("The data file '{}' does not exist.", data_file);
+    if !Path::new(&data_file.filename).exists() {
+        bail!("The data file '{}' does not exist.", data_file.filename);
     }
 
-    let fc =
-        if let Some(fcc) = parse_filename(data_file) {
-            fcc
-        } else {
-            FileComponents {
-                module: module
-                    .ok_or_else (|| anyhow!("The object type information could not be extracted \
-                    from file name `{}`. Specify it using --module, --businessobject and  \
-                    (optionally) --form.",
-                    data_file))?
-                    .to_string(),
-                business_object: business_object
-                    .ok_or_else(|| anyhow!("The object type information could not be extracted \
-                    from file name `{}`. Specify it using --module, --businessobject and \
-                    (optionally) --form.", data_file))?
-                    .to_string(),
-                form: match form {
-                    Some(s) => Some(s.to_string()),
-                    None => None
-                },
-            }
-        };
-
-
-    info!("Resolving object ids for {}::{}::{:?}", fc.module, fc.business_object, fc.form);
-    let oi = get_object_info(&soap_t, &fc).await?;
+    info!("Resolving object ids for {}::{}::{:?}", data_file.module, data_file.business_object, data_file.form);
+    let oi = get_object_info(&soap_t, &data_file).await?;
     info!("Resolved object ids for {}({})::{}({})::{:?}({})",
-          fc.module, oi.module_id, fc.business_object,
-          oi.business_object_id, fc.form, oi.gui_id);
+          data_file.module, oi.module_id, data_file.business_object,
+          oi.business_object_id, data_file.form, oi.gui_id);
 
-    let data_file_trimmed = upload_file(
+
+
+    let data_file_trimmed = data_file.trimmed_filename.as_ref()
+        .ok_or_else(|| anyhow!("Unable to trim filename '{}' to TRIRIGA limits", data_file.filename))?;
+
+    upload_file(
         &web_t,
-        data_file,
+        &data_file.filename,
+        data_file_trimmed,
         action,
         &oi,
     ).await?;
@@ -402,7 +463,7 @@ async fn handle_file(
     if !no_wait {
         get_upload_status(
             &soap_t,
-            &data_file_trimmed,
+            &data_file,
             max_retries
         ).await
     }else {
@@ -436,9 +497,10 @@ async fn handle_file(
 async fn upload_file(
     tranport: &HttpTransport,
     data_file: &str,
+    data_file_trimmed: &str,
     action: Option<&str>,
     objectinfo: &ObjectInfo,
-) -> Result<String> {
+) -> Result<()> {
 
     info!("DI: Get Security Token");
     let res = tranport.client.get(&format!("{}/html/en/default/common/dataUploadFile.jsp", &tranport
@@ -464,14 +526,12 @@ async fn upload_file(
 
     debug!("DI: Will POST using tokens: {}={}", security_name, security_value);
 
-    let path = PathBuf::from(data_file);
-    let file_name_only = path
-        .file_name().ok_or_else(|| anyhow!("Error reading path"))?
-        .to_str().ok_or_else(|| anyhow!("Error reading path"))?;
+    // let path = PathBuf::from(data_file);
+    // let file_name_only = path
+    //     .file_name().ok_or_else(|| anyhow!("Error reading path"))?
+    //     .to_str().ok_or_else(|| anyhow!("Error reading path"))?;
 
-    let data_file_trimmed = format!("{}.txt", uuid::Uuid::new_v4().to_string());
-        // trim_filename(file_name_only, FILE_NAME_MAX_LEN).
-        // ok_or_else(|| anyhow!("Unable to trim file name to TRIRIGA limits"))?;
+
 
     info!("DI: File name trimmed to '{}'", data_file_trimmed);
 
@@ -503,7 +563,7 @@ async fn upload_file(
 
     let upload_params = vec![
         ("updateAct", "createSpec"),
-        ("filenames", &data_file_trimmed),
+        ("filenames", data_file_trimmed),
         ("classTypeN", &module_id_str),
         ("objectTypeN", &business_object_id_str),
         ("guiIdN", &gui_id_str),
@@ -522,7 +582,7 @@ async fn upload_file(
 
     let the_file = reqwest::multipart::Part::
         stream(data)
-        .file_name(String::from(&data_file_trimmed))
+        .file_name(String::from(data_file_trimmed))
         .mime_str("text/plain")?;
 
     let file_parts = reqwest::multipart::Form::new()
@@ -542,7 +602,7 @@ async fn upload_file(
         .form(&upload_params)
         .send().await?;
 
-    Ok(data_file_trimmed)
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -622,7 +682,7 @@ async fn get_object_info(t: &HttpTransport, fileinfo: &FileComponents) -> Result
     })
 }
 
-async fn get_upload_status(t: &HttpTransport, filename: &str, max_retries: usize) -> Result<()>
+async fn get_upload_status(t: &HttpTransport, filename: &FileComponents, max_retries: usize) -> Result<()>
 {
     use tririga::tririga::*;
     use tririga::dto::*;
@@ -641,7 +701,7 @@ async fn get_upload_status(t: &HttpTransport, filename: &str, max_retries: usize
                     field_name: "File Name".to_string(),
                     operator: 10,
                     section_name: "General".to_string(),
-                    value: filename.to_string()
+                    value: String::from(filename.trimmed_filename.as_ref().unwrap())
                 }
             ],
         },
@@ -667,7 +727,7 @@ async fn get_upload_status(t: &HttpTransport, filename: &str, max_retries: usize
         .iter()
         .any(|&i| i == last_status)
     {
-        info!("[0: {}] Upload is not yet ready. Status is '{}'", filename, last_status);
+        info!("[0: {}] Upload is not yet ready. Status is '{}'", filename.filename, last_status);
 
         let mut backoff = ExponentialBackoff::default();
         let mut iteration_ct = 0 as usize;
@@ -683,7 +743,7 @@ async fn get_upload_status(t: &HttpTransport, filename: &str, max_retries: usize
             sleep(backoff.next_backoff().unwrap_or_else(|| Duration::from_secs(5)));
 
             info!("[{}: {}] Upload is not yet ready. Status is '{}'", iteration_ct,
-                  filename,
+                  filename.filename,
                   last_status);
 
             last_status = get_upload_status_inner(
@@ -694,7 +754,7 @@ async fn get_upload_status(t: &HttpTransport, filename: &str, max_retries: usize
 
             if processing_statuses.iter() .all(|&i| i != last_status)
             {
-                info!("Upload is ready. Status is '{}'", last_status);
+                info!("{} is ready. Status is '{}'", filename.filename, last_status);
                 break;
             }
         }
@@ -704,7 +764,9 @@ async fn get_upload_status(t: &HttpTransport, filename: &str, max_retries: usize
         Ok(())
     } else {
         let link = format!("{}/pc/notify/link?recordId={}", t.url, most_recent_record.record_id.unwrap());
-        Err(errors::OdelError::UploadFailed(last_status, link).into())
+        Err(errors::OdelError::UploadFailed(String::from(&filename.filename),
+                                                         last_status, link)
+            .into())
     }
 }
 
@@ -729,6 +791,11 @@ async fn get_upload_status_inner(
         .ok_or_else(|| anyhow!("error getting upload status"))?;
 
     Ok(String::from(record.get_field_value("Status").unwrap()))
+}
+
+fn uuid_filename(filename: &str, maxlength: usize) -> Option<String>
+{
+    Some(format!("{}.txt", uuid::Uuid::new_v4().to_string()))
 }
 
 // --
@@ -783,6 +850,8 @@ struct FileComponents {
     module: String,
     business_object: String,
     form: Option<String>,
+    filename: String,
+    trimmed_filename: Option<String>
 }
 
 ///  Extract Module, BO, and Form name from filename.
@@ -795,6 +864,8 @@ fn parse_filename(filename: &str) -> Option<FileComponents> {
             form: Some(String::from("triPatchHelper")),
             business_object: String::from("triPatchHelper"),
             module: String::from("triHelper"),
+            filename: filename.to_string(),
+            trimmed_filename: None
         };
         return Some(fc)
     }
@@ -810,12 +881,16 @@ fn parse_filename(filename: &str) -> Option<FileComponents> {
             form: Some(parts[0].trim().replace("_", " ")),
             business_object: parts[1].trim().replace("_", " "),
             module: parts[2].trim().replace("_", " "),
+            filename: filename.to_string(),
+            trimmed_filename: None
         })
     } else if parts.len() == 2 {
         return Some(FileComponents  {
             form: None,
             business_object: parts[0].trim().replace("_", " "),
             module: parts[1].trim().replace("_", " "),
+            filename: filename.to_string(),
+            trimmed_filename: None
         })
     }
 

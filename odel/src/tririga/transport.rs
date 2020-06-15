@@ -8,7 +8,6 @@ use thiserror::Error;
 use hyper::StatusCode;
 use crate::tririga::tririga::{GetHttpSession, GetHttpSessionResponse};
 use crate::tririga::dto::HttpSession;
-use crate::tririga::transport::Error::SoapError;
 
 #[derive(Error, Debug)]
 pub enum Error {
