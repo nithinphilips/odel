@@ -31,12 +31,13 @@ use tririga::transport::HttpTransport;
 use tririga::tririga::RunNamedQuery;
 use std::borrow::Borrow;
 use crate::tririga::TririgaEnvironment;
+use futures::TryFuture;
+use std::future::Future;
+use crate::tririga::transport::Transport;
+use crate::errors::OdelError;
 
 const FILE_NAME_MAX_LEN: usize = 50;
-const TRIRIGA_AUTH_OBJECTID: &str = "1000";
-#[allow(dead_code)]
-const TRIRIGA_AUTH_LOGIN_ACTIONID: &str = "1005";
-const TRIRIGA_AUTH_FORCELOGIN_ACTIONID: &str = "1006";
+
 
 const DI_SUCCESS_STATUS_EN_US: &str = "Rollup All Completed";
 const MAX_RETRIES: &str = "23";
@@ -254,7 +255,7 @@ async fn run() -> Result<()> {
     info!("Connecting to {} as {}", url, username);
 
     let data_files = matches.values_of("DATAFILE").ok_or_else(|| anyhow!("Datafile is required"))?;
-
+    let data_files_ct = data_files.len();
 
     let web_t = HttpTransport{
         client: reqwest::Client::builder().cookie_store(true).build()?,
@@ -265,7 +266,7 @@ async fn run() -> Result<()> {
     };
 
     let soap_t = HttpTransport{
-        client: reqwest::Client::builder().build()?,
+        client: reqwest::Client::builder().cookie_store(true).build()?,
         url: url.to_string(),
         endpoint: format!("{}/ws/TririgaWS?wsdl", url),
         username: username.to_string(),
@@ -277,26 +278,70 @@ async fn run() -> Result<()> {
     let cli_form = matches.value_of("form");
     let action = matches.value_of("action");
 
+    // Login once
+    info!("Create Web session");
+    web_t.login_web().await?;
+    info!("Create SOAP session");
+    soap_t.login_soap().await?;
 
-    let mut futures = Vec::with_capacity(data_files.len());
+    // We could queue all the futures and join together later so that all the files
+    // are processed concurrently (with futures::future::join_all). However this fails
+    // about half of the time with 2 files and most of the time when processing more than
+    // 4 files at a time because TRIRIGA is a pile of garbage.
+    // for data_file in data_files {
+    //     handle_file(
+    //         data_file,
+    //         cli_module,
+    //         cli_business_object,
+    //         cli_form,
+    //         action,
+    //         no_wait,
+    //         max_retries,
+    //         &soap_t,
+    //         &web_t
+    //     ).await?;
+    // }
 
-    for data_file in data_files {
-        let fut = handle_file(
-            data_file,
-            cli_module,
-            cli_business_object,
-            cli_form,
-            action,
-            no_wait,
-            max_retries,
-            &soap_t,
-            &web_t
-        );
+    let results = futures::future::join_all(
+        data_files
+            .map( | data_file|
+                handle_file(
+                    data_file,
+                    cli_module,
+                    cli_business_object,
+                    cli_form,
+                    action,
+                    no_wait,
+                    max_retries,
+                    &soap_t,
+                    &web_t
+                )
+            )
+    ).await;
 
-        futures.push(fut);
+
+    let fails: Vec<_> = results
+        .iter()
+        .filter(|r| match r {
+            Ok(_) => false,
+            Err(_) => true
+        })
+        .collect();
+    let fail_count = fails.len();
+
+    if fail_count > 0 {
+        error!("{} of {} files failed", fail_count, data_files_ct);
+
+        for fail in fails {
+            if let Err(e) = fail {
+                error!("{}", e)
+            }
+        }
+
+        return Err(OdelError::GeneralError(format!(
+            "{} of {} files failed", fail_count, data_files_ct)
+        ).into());
     }
-
-    let res = futures::future::try_join_all(futures).await?;
 
     Ok(())
 }
@@ -366,27 +411,34 @@ async fn handle_file(
     }
 }
 
+// async fn tririga_login(
+//     tranport: &HttpTransport,
+// ) -> Result<()>
+// {
+//     let login_params = vec![
+//         ("USERNAME", tranport.username.as_str()),
+//         ("PASSWORD", tranport.password.as_str()),
+//         ("objectId", TRIRIGA_AUTH_OBJECTID),
+//         ("actionId", TRIRIGA_AUTH_FORCELOGIN_ACTIONID)
+//     ];
+//
+//     info!("DI: Create session");
+//     tranport.client.get(&format!("{}/login", &tranport.url)).send().await?;
+//
+//     info!("DI: Login");
+//     tranport.client.post(&format!("{}/Authenticate.srv", &tranport.url))
+//         .form(&login_params)
+//         .send().await?;
+//
+//     Ok(())
+// }
+
 async fn upload_file(
     tranport: &HttpTransport,
     data_file: &str,
     action: Option<&str>,
     objectinfo: &ObjectInfo,
 ) -> Result<String> {
-
-    let login_params = vec![
-        ("USERNAME", tranport.username.as_str()),
-        ("PASSWORD", tranport.password.as_str()),
-        ("objectId", TRIRIGA_AUTH_OBJECTID),
-        ("actionId", TRIRIGA_AUTH_FORCELOGIN_ACTIONID)
-    ];
-
-    info!("DI: Create session");
-    tranport.client.get(&format!("{}/login", &tranport.url)).send().await?;
-
-    info!("DI: Login");
-    tranport.client.post(&format!("{}/Authenticate.srv", &tranport.url))
-        .form(&login_params)
-        .send().await?;
 
     info!("DI: Get Security Token");
     let res = tranport.client.get(&format!("{}/html/en/default/common/dataUploadFile.jsp", &tranport
@@ -417,8 +469,9 @@ async fn upload_file(
         .file_name().ok_or_else(|| anyhow!("Error reading path"))?
         .to_str().ok_or_else(|| anyhow!("Error reading path"))?;
 
-    let data_file_trimmed = trim_filename(file_name_only, FILE_NAME_MAX_LEN).
-        ok_or_else(|| anyhow!("Unable to trim file name to TRIRIGA limits"))?;
+    let data_file_trimmed = format!("{}.txt", uuid::Uuid::new_v4().to_string());
+        // trim_filename(file_name_only, FILE_NAME_MAX_LEN).
+        // ok_or_else(|| anyhow!("Unable to trim file name to TRIRIGA limits"))?;
 
     info!("DI: File name trimmed to '{}'", data_file_trimmed);
 
@@ -614,7 +667,7 @@ async fn get_upload_status(t: &HttpTransport, filename: &str, max_retries: usize
         .iter()
         .any(|&i| i == last_status)
     {
-        info!("[0] Upload is not yet ready. Status is '{}'", last_status);
+        info!("[0: {}] Upload is not yet ready. Status is '{}'", filename, last_status);
 
         let mut backoff = ExponentialBackoff::default();
         let mut iteration_ct = 0 as usize;
@@ -629,7 +682,9 @@ async fn get_upload_status(t: &HttpTransport, filename: &str, max_retries: usize
             //task::sleep(Duration::from_secs(1)).await;
             sleep(backoff.next_backoff().unwrap_or_else(|| Duration::from_secs(5)));
 
-            info!("[{}] Upload is not yet ready. Status is '{}'", iteration_ct, last_status);
+            info!("[{}: {}] Upload is not yet ready. Status is '{}'", iteration_ct,
+                  filename,
+                  last_status);
 
             last_status = get_upload_status_inner(
                 t,
@@ -648,7 +703,6 @@ async fn get_upload_status(t: &HttpTransport, filename: &str, max_retries: usize
     if last_status == DI_SUCCESS_STATUS_EN_US {
         Ok(())
     } else {
-        warn!("Upload failed");
         let link = format!("{}/pc/notify/link?recordId={}", t.url, most_recent_record.record_id.unwrap());
         Err(errors::OdelError::UploadFailed(last_status, link).into())
     }

@@ -40,6 +40,9 @@ impl Default for TririgaEnvironment {
     }
 }
 
+
+
+
 pub trait ResponseHelperExt {
     fn get_field_value(&self, field: &str) -> Option<&String>;
     fn get_date_field_value(&self, field: &str) -> Option<DateTime<FixedOffset>>;

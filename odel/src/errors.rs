@@ -2,6 +2,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum OdelError {
+    #[error("{0}")]
+    GeneralError(String),
     #[error("File processing failed in TRIRIGA. Status: '{0}'. For more details, see {1}")]
     UploadFailed(String, String),
     #[error("File status did not change after the maximum wait time had elapsed.
