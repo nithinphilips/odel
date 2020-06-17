@@ -162,7 +162,9 @@ Patch Helpers:
 
 TRIRIGA has a limitation of 50 characters for all Data Integrator file names.
 If the file name has more than 50 characters, Odel will truncate the file name
-to fit the limits.
+to fit the limits. If you try to upload multiple files with the same name at
+once Odel will instead send a randomly generated file name to TRIRIGA. Run with
+the ``-v`` flag to see the name changes.
 
 URL Naming Conventions
 ----------------------
