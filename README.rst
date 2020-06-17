@@ -5,9 +5,10 @@ Odel is a tool to automate TRIRIGA Data Upload using the Data Integrator tool.
 Features
 --------
 * Detects object info from filename.
-* Blocks until the uploaded file is completely processed.
+* Waits until the uploaded files are completely processed.
+* Concurrently upload multiple files.
+* Synchronously upload hierarchical files to multiple business objects.
 * Automatically selects upload action.
-* Upload hierachical files to multiple business objects in a batch.
 
 Getting Started
 ---------------
@@ -38,7 +39,7 @@ completion script to the end, omitting the ``using namespace`` lines.
 
 Basic Usage
 -----------
-Once added to ``PATH``, odel can be invoked using the ``odel`` command::
+Once added to ``PATH``, Odel can be invoked using the ``odel`` command::
 
     odel --help
 
@@ -50,7 +51,7 @@ delimited)::
     Homer   Simpson hsimpson
     Bender  Rodriguez       brodriguez
 
-To upload ``users.txt`` to Tririga running on ``localhost``, you can run::
+To upload ``users.txt`` to TRIRIGA running on ``localhost``, you can run::
 
     odel --username=system --password=admin --module=triPeople \
          --businessobject=triPeople --form=triEmployee \
@@ -72,7 +73,7 @@ also be omitted (also now is a good time to change that password!)::
     odel --url=http://localhost:9080 triPeople-triPeople-triEmployee.txt
 
 You can optionally put the connection information in a JSON file named
-``tririga.json`` in the current directory.
+``TRIRIGA.json`` in the current directory.
 
 The file should look like this:
 
@@ -85,13 +86,38 @@ The file should look like this:
         "webPassword" : "admin"
     }
 
-If you have a ``tririga.json`` file and you set the commandline connection
-options, the values set in commandline take precedence. You can also override
-individual settings in the ``tririga.json`` file by setting the matching
-commandline options.
+If you have a ``TRIRIGA.json`` file and you set the command-line connection
+options, the values set in command-line take precedence. You can also override
+individual settings in the ``TRIRIGA.json`` file by setting the matching
+command-line options.
 
 Note that TRIRIGA processes uploads one at a time. So, if another user uploads
 a file around the same time as you, your upload may appear to hang.
+
+Concurrent File Upload
+----------------------
+If you provide multiple files as input to Odel, they will be uploaded and
+processed concurrently. For example::
+
+    odel Location-triBuilding-triBuilding.txt triPeople-triPeople-triEmployee.txt
+
+Odel will upload both of these files at once and wait until both files are
+processed.
+
+This is useful to upload multiple unrelated files as quickly as possible.
+
+Synchronous File Upload
+-----------------------
+You can upload files one after another by chaining multiple Odel invocations.
+For example::
+
+    odel Location-triBuilding-triBuilding.txt && odel triPeople-triPeople-triEmployee.txt
+
+Odel will upload the first file and wait until it is processed by TRIRIGA. Then
+the shell will execute the second upload.
+
+This is useful if the second upload requires the records in the first file to exist
+in order to create associations.
 
 File Naming Conventions
 -----------------------
@@ -134,24 +160,24 @@ Patch Helpers:
  ``PatchHelper_UpgradeApplication.txt`` will parse to Module = triHelper,
  Business Object = triPatchHelper, Form = triPatchHelper.
 
-Tririga has a limitation of 50 characters for all Data Integrator file names.
+TRIRIGA has a limitation of 50 characters for all Data Integrator file names.
 If the file name has more than 50 characters, Odel will truncate the file name
 to fit the limits.
 
 URL Naming Conventions
 ----------------------
 Scheme, host and port:
- ``http://tririga.example.com:9080/``
+ ``http://TRIRIGA.example.com:9080/``
 Scheme, host, port and context path:
- ``http://tririga.example.com:9080/tririga``
+ ``http://TRIRIGA.example.com:9080/TRIRIGA``
 
 Waiting for Processing
 ----------------------
-By default Odel will wait until Tririga changes the data upload status to
+By default Odel will wait until TRIRIGA changes the data upload status to
 *Rollup All Completed* or *Failed*, indicating the completion of the upload
 process.
 
-This only waits for creation of records. Tririga may still continue to process
+This only waits for creation of records. TRIRIGA may still continue to process
 *Associate* and other asynchronous tasks in the background (such as with patch
 helpers.)
 
@@ -179,7 +205,8 @@ To build releases::
 
     make dist
 
-By default, the binary will be dynamically linked to C Runtime. To enable
+By default, the Windows binary will be dynamically linked to C Runtime and
+requires that the MSVC Runtime is installed to run the executable. To enable
 static linkage, add to ``~/.cargo/config``::
 
     [target.x86_64-pc-windows-msvc]
@@ -190,7 +217,7 @@ License
 -------
 .. code::
 
-    Odel. Tool to upload Data Integrator files to IBM Tririga.
+    Odel. Tool to upload Data Integrator files to IBM TRIRIGA.
     Copyright (C) 2020 Nithin Philips
 
     This program is free software: you can redistribute it and/or modify
