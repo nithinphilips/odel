@@ -3,13 +3,10 @@
 //! Odel is a tool to upload Data Integrator files to IBM TRIRIGA.
 //!
 
-#![recursion_limit = "1024"]
-
 mod errors;
 mod soap;
 mod tririga;
 mod utils;
-
 
 #[allow(unused_imports)]
 #[macro_use] extern crate log;
@@ -32,11 +29,9 @@ use tririga::tririga::RunNamedQuery;
 use crate::tririga::TririgaEnvironment;
 use crate::tririga::transport::Transport;
 use crate::errors::OdelError;
-use std::error::Error;
 use itertools::Itertools;
 
 const FILE_NAME_MAX_LEN: usize = 50;
-
 
 const DI_SUCCESS_STATUS_EN_US: &str = "Rollup All Completed";
 const MAX_RETRIES: &str = "23";
@@ -236,7 +231,7 @@ async fn run() -> Result<()> {
     let url = match matches.value_of("url") {
         Some(s) => String::from(normalize_url(s)),
         None => {
-            let t_url = env.web_host.ok_or(anyhow!("No webURL value set in {}",
+            let t_url = env.web_host.ok_or_else(|| anyhow!("No webURL value set in {}",
             tririga::TRIRIGA_JSON_FILENAME))?;
             String::from(normalize_url(t_url.as_str()))
         }
@@ -244,13 +239,13 @@ async fn run() -> Result<()> {
 
     let username = match matches.value_of("username") {
         Some(s) => String::from(s),
-        None => env.web_username.ok_or(anyhow!("No webUsername value set in {}",
+        None => env.web_username.ok_or_else(|| anyhow!("No webUsername value set in {}",
         tririga::TRIRIGA_JSON_FILENAME))?
     };
 
     let password = match matches.value_of("password") {
         Some(s) => String::from(s),
-        None => env.web_password.ok_or(anyhow!("No webPassword value set in {}",
+        None => env.web_password.ok_or_else(|| anyhow!("No webPassword value set in {}",
         tririga::TRIRIGA_JSON_FILENAME))?
     };
 
@@ -331,10 +326,7 @@ async fn run() -> Result<()> {
 
     let fails: Vec<_> = results
         .iter()
-        .filter(|r| match r {
-            Ok(_) => false,
-            Err(_) => true
-        })
+        .filter(|r| r.is_err())
         .collect();
     let fail_count = fails.len();
 
@@ -358,7 +350,7 @@ async fn run() -> Result<()> {
     Ok(())
 }
 
-fn get_file_trim_strategy(files: &Vec<&str>) -> fn(&str, usize) -> Option<String>
+fn get_file_trim_strategy(files: &[&str]) -> fn(&str, usize) -> Option<String>
 {
     let pre_trimmed: Vec<String> = files.iter()
         .map(|x| {
@@ -381,7 +373,7 @@ fn get_file_trim_strategy(files: &Vec<&str>) -> fn(&str, usize) -> Option<String
     }
 }
 
-fn parse_trim_files(files: &Vec<&str>,
+fn parse_trim_files(files: &[&str],
                     module: Option<&str>,
                     business_object: Option<&str>,
                     form: Option<&str>) -> Result<Vec<FileComponents>>
@@ -390,7 +382,7 @@ fn parse_trim_files(files: &Vec<&str>,
 
     let file_trim_strategy = get_file_trim_strategy(&files);
 
-    for data_file in files {
+    for &data_file in files {
 
         let path = PathBuf::from(data_file);
         let file_name_only = path
