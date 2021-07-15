@@ -186,6 +186,17 @@ helpers.)
 To disable this and quit as soon as the upload is complete, specify the
 ``--no-wait`` flag.
 
+Uploading CSV and other files
+-----------------------------
+You can use a tool like XSV_ to convert CSVs and other delimited files
+to tab delimited format suitable for use with Odel and TRIRIGA.
+
+Run XSV like this::
+
+    xsv fmt -t '\t' 'input.csv' > 'output.txt'
+
+.. _XSV: https://github.com/BurntSushi/xsv
+
 Building
 --------
 1. Install RustUp: https://www.rust-lang.org/tools/install or update to latest
@@ -220,7 +231,7 @@ License
 .. code::
 
     Odel. Tool to upload Data Integrator files to IBM TRIRIGA.
-    Copyright (C) 2020 Nithin Philips
+    Copyright (C) 2021 Nithin Philips
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

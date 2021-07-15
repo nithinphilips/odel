@@ -69,6 +69,8 @@ fn build_cli() -> App<'static, 'static> {
 
         (@arg no_wait: -w --("no-wait") "Do not Wait until the file is processed by TRIRIGA. \
         See WAIT below")
+        (@arg unique_filename: -k --("unique-filename") "Always rename the file to a unique name")
+
 
         (@arg module: +takes_value -m --("module") "The name of the record's module you are \
         uploading")
@@ -161,7 +163,7 @@ EXIT CODES:
     has been sent to TRIRIGA. It may still fail to process in TRIRIGA."#)
     (long_version: concat!(
         "v", crate_version!(), " ", env!("VERGEN_TARGET_TRIPLE"), "\n",
-        "Copyright (C) 2020 ", crate_authors!(), "\n",
+        "Copyright (C) 2021 ", crate_authors!(), "\n",
         "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.", "\n",
         "This is free software: you are free to change and redistribute it.", "\n",
         "There is NO WARRANTY, to the extent permitted by law.", "\n\n",
@@ -191,6 +193,7 @@ async fn run() -> Result<()> {
     let quiet = matches.is_present("quiet");
 
     let no_wait = matches.is_present("no_wait");
+    let unique_filename = matches.is_present("unique_filename");
     let max_retries = matches.value_of("max_retries").unwrap_or_else(|| MAX_RETRIES);
 
     let max_retries = max_retries.parse::<usize>()
@@ -303,6 +306,7 @@ async fn run() -> Result<()> {
 
     let files = parse_trim_files(
         &data_files,
+        unique_filename,
         cli_module,
         cli_business_object,
         cli_form
@@ -374,13 +378,19 @@ fn get_file_trim_strategy(files: &[&str]) -> fn(&str, usize) -> Option<String>
 }
 
 fn parse_trim_files(files: &[&str],
+                    unique_filename: bool,
                     module: Option<&str>,
                     business_object: Option<&str>,
                     form: Option<&str>) -> Result<Vec<FileComponents>>
 {
     let mut result = Vec::with_capacity(files.len());
 
-    let file_trim_strategy = get_file_trim_strategy(&files);
+    let file_trim_strategy =
+        if unique_filename {
+            uuid_filename
+        } else {
+            get_file_trim_strategy(&files)
+        };
 
     for &data_file in files {
 
