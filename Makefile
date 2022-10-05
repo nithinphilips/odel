@@ -23,7 +23,7 @@ ifndef SKIP_TOOL_CHECK
 			$(if $(shell which $(exec) 2> /dev/null),some string,$(error "Required tool '$(exec)' was not found in PATH. Install it or set `SKIP_TOOL_CHECK=1` to force.")))
 endif
 
-
+# TODO: Allow this to be blank if python is not installed
 TARGET=$(shell RUSTC_BOOTSTRAP=1 $(RUSTC) -Z unstable-options --print target-spec-json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["llvm-target"])')
 GIT_BIN?=git
 

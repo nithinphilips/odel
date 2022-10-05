@@ -44,12 +44,13 @@ Once added to ``PATH``, Odel can be invoked using the ``odel`` command::
     odel --help
 
 We will be working with a file called ``users.txt`` (the fields are TAB
-delimited)::
+delimited.) Create it by pasting all the lines below into Bash::
 
-    $ cat users.txt
-    triFirstNameTX  triLastNameTX   triUserNameTX
-    Homer   Simpson hsimpson
-    Bender  Rodriguez       brodriguez
+    cat > users.txt <<EOF
+    triFirstNameTX	triLastNameTX	triUserNameTX
+    Homer	Simpson	hsimpson
+    Bender	Rodriguez	brodriguez
+    EOF
 
 To upload ``users.txt`` to TRIRIGA running on ``localhost``, you can run::
 
@@ -58,14 +59,18 @@ To upload ``users.txt`` to TRIRIGA running on ``localhost``, you can run::
          --url=http://localhost:9080/ users.txt
 
 You can save some typing if you name the DI files to include the module,
-business object and form names. For example, if you rename ``users.txt``
-to ``triPeople-triPeople-triEmployee.txt``, you can run::
+business object and form names. For example, rename ``users.txt``
+to ``triPeople-triPeople-triEmployee.txt``::
+
+    mv users.txt triPeople-triPeople-triEmployee.txt
+
+you can then run::
 
     odel --username=system --password=admin \
          --url=http://localhost:9080/ triPeople-triPeople-triEmployee.txt
 
 Odel will parse the file name to get the type information. See `File Naming
-Conventions`_ below for more details.
+Conventions`_ below for more details on how it works.
 
 The username and password default to ``system`` and ``admin``, so those can
 also be omitted (also now is a good time to change that password!)::
