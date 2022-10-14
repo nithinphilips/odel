@@ -514,7 +514,7 @@ async fn upload_file(
 
     if let Ok(data) = res.text().await {
         let re =
-            Regex::new(r#"new TririgaSecurity\("(?P<name>[^"]*)","(?P<value>[^"]*)"\);"#)?;
+            Regex::new(r#"new TririgaSecurity\([\s]*"(?P<name>[^"]*)"[\s]*,[\s]*"(?P<value>[^"]*)"[\s]*\);"#)?;
         let caps = re.captures(&data).ok_or_else(|| anyhow!("Error compiling Regex"))?;
 
         security_name = String::from(&caps["name"]);
