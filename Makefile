@@ -31,6 +31,8 @@ GIT_BIN?=git
 PROJECT =  $(shell grep '^name' odel/Cargo.toml | grep -Po '(?<=")[^"]+(?=")')
 VERSION = $(shell grep '^version' odel/Cargo.toml | grep -Po '(?<=")[^"]+(?=")')
 
+GITHUB_TAG=v$(VERSION)
+
 DISTROOT=./dist
 DISTDIR = $(PROJECT)-$(VERSION)-$(TARGET)
 DISTZIP=$(PROJECT)-$(VERSION)-$(TARGET)-bin.zip
@@ -99,6 +101,19 @@ dist: release completion ## Create a distribution package
 	cd $(DISTROOT) && zip -r $(DISTZIP) $(DISTDIR)/
 	rm -rf $(DISTROOT)/$(DISTDIR)
 
+ChangeLog.$(VERSION).rst: ChangeLog.rst
+	test $(shell grep -c '^v$(VERSION)' ChangeLog.rst) -eq 1 || (echo "Please add a change log entry for release $(VERSION) before distributing"; exit 1)
+	sed '1,/^v.*/d;/^-\+$$/d;/^v.*/,$$d' ChangeLog.rst > $@
+
+github-publish: ChangeLog.$(VERSION).rst dist
+	# Check if the tag exists in the local repo
+	test $(shell git tag -l | grep -x -c -F "$(GITHUB_TAG)") -eq 1 || ( printf "The tag $(GITHUB_TAG) does not exit in this repository. Tag your release first.\n\tgit tag $(GITHUB_TAG)\n"; exit 1 )
+	# Check if the tag exists in the remote repo
+	test $(shell git ls-remote --tags origin | grep -c "refs/tags/$(GITHUB_TAG)$$") -eq 1 || ( echo "The tag $(GITHUB_TAG) has not been pushed to remote. Push your tags first."; exit 1 )
+	# Create release
+	gh release create $(GITHUB_TAG) -F ChangeLog.$(VERSION).rst $(DISTROOT)/$(DISTZIP)
+
+
 distsrc: ## Creates a zip file with source code
 	mkdir -p $(DISTROOT)/$(DISTDIR)
 	rm -f $(DISTROOT)/$(SRCDISTZIP)
@@ -122,3 +137,7 @@ help: ## This help dialog.
 		printf '\033[0m'; \
 		printf "%s\n" $$help_info; \
 	done
+
+# Suppress command echo by default. When V=<anything> disable suppression.
+$(V).SILENT:
+	
