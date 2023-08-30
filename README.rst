@@ -1,6 +1,14 @@
 Odel
 ====
 Odel is a tool to automate TRIRIGA Data Upload using the Data Integrator tool.
+You can use Odel to upload a Data Integrator files in a consistent repeatable
+way.
+
+.. Note:: Since TRIRIGA 4.0.0, the Data Integrator feature has several bugs
+          that are unresolved as of 4.3.0.
+
+          For example, you are not able to set values on Locator fields that
+          point to a module.
 
 Features
 --------

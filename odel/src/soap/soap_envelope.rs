@@ -6,7 +6,6 @@ use std::str::FromStr;
 use yaserde::{YaDeserialize, YaSerialize};
 use yaserde_derive::{YaDeserialize, YaSerialize};
 use std::fmt::Display;
-use serde::export::Formatter;
 use std::fmt;
 
 #[derive(Default, PartialEq, Debug, YaSerialize, YaDeserialize)]
@@ -75,7 +74,7 @@ pub struct Fault {
 }
 
 impl Display for Fault {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for reasontext in &self.reason.text {
             write!(f, "{}", reasontext.text)?;
         }

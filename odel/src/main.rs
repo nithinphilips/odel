@@ -31,7 +31,7 @@ use crate::tririga::transport::Transport;
 use crate::errors::OdelError;
 use itertools::Itertools;
 
-const FILE_NAME_MAX_LEN: usize = 50;
+const FILE_NAME_MAX_LEN: usize = 40;
 
 const DI_SUCCESS_STATUS_EN_US: &str = "Rollup All Completed";
 const MAX_RETRIES: &str = "23";
@@ -567,14 +567,20 @@ async fn upload_file(
         ("updateAct", "createSpec"),
         ("filenames", data_file_trimmed),
         ("classTypeN", &module_id_str),
+        ("classType", &module_id_str),
         ("objectTypeN", &business_object_id_str),
+        ("objectType", &business_object_id_str),
         ("guiIdN", &gui_id_str),
+        ("guiId", &gui_id_str),
         ("delimiterN", ".TAB"),
+        ("delimiter", ".TAB"),
         ("charSet", "UTF-8"),
         ("transactionTypeN", "Insert/New"),
+        ("transactionType", "Insert/New"),
         ("batch", "NO"),
         ("actionName", action_name),
-        ("stateName", "triDraft")
+        ("stateName", "triDraft"),
+        (&security_name, &security_value),
     ];
 
     info!("DI: Reading file: '{}'", data_file);
@@ -582,14 +588,12 @@ async fn upload_file(
     let mut data = Vec::new();
     f.read_to_end(&mut data)?;
 
-    let the_file = reqwest::multipart::Part::
-        stream(data)
+    let the_other_file = reqwest::multipart::Part::stream(data)
         .file_name(String::from(data_file_trimmed))
         .mime_str("text/plain")?;
 
     let file_parts = reqwest::multipart::Form::new()
-        .text("updateAct", "createSpec")
-        .part("theFile", the_file);
+        .part(String::from(data_file_trimmed),  the_other_file);
 
     info!("DI: Upload file");
     tranport.client
@@ -599,6 +603,7 @@ async fn upload_file(
         .send().await?;
 
     info!("DI: Create DI job");
+    // dataSmartUpload.jsp?updateAct=createSpec&classTypeN=8&objectTypeN=10008338&guiIdN=10012038&delimiterN=.TAB&transactionTypeN=Insert/New
     tranport.client.post(&format!("{}/html/en/default/common/dataSmartUpload.jsp", &tranport.url))
         .header(&security_name, &security_value)
         .form(&upload_params)
