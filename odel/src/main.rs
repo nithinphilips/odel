@@ -399,23 +399,13 @@ fn parse_trim_files(files: &[&str],
             .file_name().ok_or_else(|| anyhow!("Error reading path"))?
             .to_str().ok_or_else(|| anyhow!("Error reading path"))?;
 
+        // This is not correct.
+        // If --module and --businessobject CLI flags are specified, we must not parse.
         let fc =
-            if let Some(mut fcc) = parse_filename(data_file) {
-                fcc.trimmed_filename = file_trim_strategy(file_name_only, FILE_NAME_MAX_LEN);
-                fcc
-            } else {
+            if module.is_some() && business_object.is_some() {
                 FileComponents {
-                    module: module
-                        .ok_or_else (|| anyhow!("The object type information could not be extracted \
-                    from file name `{}`. Specify it using --module, --businessobject and  \
-                    (optionally) --form.",
-                    data_file))?
-                        .to_string(),
-                    business_object: business_object
-                        .ok_or_else(|| anyhow!("The object type information could not be extracted \
-                    from file name `{}`. Specify it using --module, --businessobject and \
-                    (optionally) --form.", data_file))?
-                        .to_string(),
+                    module: String::from(module.unwrap()),
+                    business_object: String::from(business_object.unwrap()),
                     form: match form {
                         Some(s) => Some(s.to_string()),
                         None => None
@@ -423,6 +413,14 @@ fn parse_trim_files(files: &[&str],
                     filename: data_file.to_string(),
                     trimmed_filename: file_trim_strategy(file_name_only, FILE_NAME_MAX_LEN)
                 }
+            } else if let Some(mut fcc) = parse_filename(data_file) {
+                fcc.trimmed_filename = file_trim_strategy(file_name_only, FILE_NAME_MAX_LEN);
+                fcc
+            } else {
+                bail!("The object type information could not be extracted \
+                    from file name `{}`. Specify it using --module, --businessobject and  \
+                    (optionally) --form.",
+                    data_file);
             };
         result.push(fc);
     }

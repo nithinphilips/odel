@@ -2,6 +2,12 @@ Change Log
 ==========
 Odel Change Log
 
+v1.3.1
+------
+* Fix: If both ``--module`` and ``--businessobject`` CLI flags are set, do not
+  parse the file name, even if it's parseable. Use the user specified values
+  instead.
+
 v1.3.0
 ------
 * Enhanced support for 4.x TRIRIGA.
