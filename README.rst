@@ -4,8 +4,7 @@ Odel is a tool to automate TRIRIGA Data Upload using the Data Integrator tool.
 You can use Odel to upload a Data Integrator files in a consistent repeatable
 way.
 
-.. Note:: Since TRIRIGA 4.0.0, the Data Integrator feature has several bugs
-          that are unresolved as of 4.3.0.
+.. Note:: In TRIRIGA 4.0.0 to 4.3.0 the Data Integrator feature has several bugs.
 
           For example, you are not able to set values on Locator fields that
           point to a module.
@@ -20,6 +19,13 @@ Features
 
 Getting Started
 ---------------
+Using Scoop_::
+
+    scoop bucket add nithin https://github.com/nithinphilips/scoop-bucket
+    scoop install nithin/odel
+
+----
+
 Binaries are available for Windows and Linux.  Download it from the `Releases
 <https://github.com/nithinphilips/odel/releases>`_ section.
 
@@ -44,6 +50,8 @@ Note: If you have existing startup commands in
 ``Microsoft.PowerShell_profile.ps1``, do not copy. Instead manually add the
 completion script to the end, omitting the ``using namespace`` lines.
 
+
+.. _Scoop: https://scoop.sh/
 
 Basic Usage
 -----------
@@ -86,7 +94,7 @@ also be omitted (also now is a good time to change that password!)::
     odel --url=http://localhost:9080 triPeople-triPeople-triEmployee.txt
 
 You can optionally put the connection information in a JSON file named
-``TRIRIGA.json`` in the current directory.
+``tririga.json`` in the current directory.
 
 The file should look like this:
 
@@ -99,9 +107,9 @@ The file should look like this:
         "webPassword" : "admin"
     }
 
-If you have a ``TRIRIGA.json`` file and you set the command-line connection
+If you have a ``tririga.json`` file and you set the command-line connection
 options, the values set in command-line take precedence. You can also override
-individual settings in the ``TRIRIGA.json`` file by setting the matching
+individual settings in the ``tririga.json`` file by setting the matching
 command-line options.
 
 Note that TRIRIGA processes uploads one at a time. So, if another user uploads
@@ -129,8 +137,9 @@ For example::
 Odel will upload the first file and wait until it is processed by TRIRIGA. Then
 the shell will execute the second upload.
 
-This is useful if the second upload requires the records in the first file to exist
-in order to create associations.
+This is useful if the second upload requires the records in the first file to
+exist in order to create associations. Odel will wait until the Data Upload
+status is *Rollup All Completed*.
 
 File Naming Conventions
 -----------------------
@@ -146,7 +155,7 @@ Odel parses the file name like this:
 3) If there are exactly two parts, they are treated as Module and Business Object.
    The default Form for the Business Object is selected.
 
-So, you can have additional information in the file name, as long as the information
+You can have additional information in the file name, as long as the information
 Odel is looking for is at the very end.
 
 These are examples of files names for Employee Data. Odel parses all these as
@@ -209,6 +218,7 @@ Run XSV like this::
     xsv fmt -t '\t' 'input.csv' > 'output.txt'
 
 .. _XSV: https://github.com/BurntSushi/xsv
+
 
 Building
 --------
