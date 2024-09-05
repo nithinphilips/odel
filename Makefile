@@ -105,13 +105,16 @@ ChangeLog.$(VERSION).rst: ChangeLog.rst
 	test $(shell grep -c '^v$(VERSION)' ChangeLog.rst) -eq 1 || (echo "Please add a change log entry for release $(VERSION) before distributing"; exit 1)
 	sed '1,/^v.*/d;/^-\+$$/d;/^v.*/,$$d' ChangeLog.rst > $@
 
-github-publish: ChangeLog.$(VERSION).rst dist
+%.md: %.rst
+	pandoc -o $@ -s $<
+
+github-publish: ChangeLog.$(VERSION).md dist
 	# Check if the tag exists in the local repo
 	test $(shell git tag -l | grep -x -c -F "$(GITHUB_TAG)") -eq 1 || ( printf "The tag $(GITHUB_TAG) does not exit in this repository. Tag your release first.\n\tgit tag $(GITHUB_TAG)\n"; exit 1 )
 	# Check if the tag exists in the remote repo
 	test $(shell git ls-remote --tags origin | grep -c "refs/tags/$(GITHUB_TAG)$$") -eq 1 || ( echo "The tag $(GITHUB_TAG) has not been pushed to remote. Push your tags first."; exit 1 )
 	# Create release
-	gh release create $(GITHUB_TAG) -F ChangeLog.$(VERSION).rst $(DISTROOT)/$(DISTZIP)
+	gh release create $(GITHUB_TAG) -F ChangeLog.$(VERSION).md $(DISTROOT)/$(DISTZIP)
 
 
 distsrc: ## Creates a zip file with source code
